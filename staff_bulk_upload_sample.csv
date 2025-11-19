@@ -1,0 +1,17 @@
+name,email,phone_number,intercom,password,location
+John Doe,john.doe@company.com,+234 801 234 5678,101,Password123!,Head Office
+Jane Smith,jane.smith@company.com,+234 802 345 6789,102,Password123!,Branch A
+Michael Johnson,michael.johnson@company.com,+234 803 456 7890,103,Password123!,Head Office
+Sarah Williams,sarah.williams@company.com,+234 804 567 8901,104,Password123!,Branch B
+David Brown,david.brown@company.com,+234 805 678 9012,105,Password123!,Head Office
+Emily Davis,emily.davis@company.com,+234 806 789 0123,106,Password123!,Branch A
+James Wilson,james.wilson@company.com,+234 807 890 1234,107,Password123!,Branch C
+Lisa Anderson,lisa.anderson@company.com,+234 808 901 2345,108,Password123!,Head Office
+Robert Taylor,robert.taylor@company.com,+234 809 012 3456,109,Password123!,Branch B
+Jennifer Martinez,jennifer.martinez@company.com,+234 810 123 4567,110,Password123!,
+William Garcia,william.garcia@company.com,+234 811 234 5678,111,Password123!,Head Office
+Mary Rodriguez,mary.rodriguez@company.com,+234 812 345 6789,112,Password123!,Branch A
+Thomas Lee,thomas.lee@company.com,+234 813 456 7890,113,Password123!,
+Patricia Harris,patricia.harris@company.com,+234 814 567 8901,114,Password123!,Branch C
+Christopher Clark,christopher.clark@company.com,+234 815 678 9012,115,Password123!,Head Office
+
