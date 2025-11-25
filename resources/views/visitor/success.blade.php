@@ -25,6 +25,11 @@
     <div class="bg-white p-8 shadow-lg rounded-2xl border border-gray-100"
          style="animation: fadeUp .6s ease-out">
 
+        <!-- Logo -->
+        <div class="flex justify-center mb-6">
+            <img src="{{ asset('images/logo.svg') }}" alt="VMS Logo" class="h-16 w-16">
+        </div>
+
         <!-- Animated Checkmark -->
         <div class="flex justify-center">
             <div class="h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center"

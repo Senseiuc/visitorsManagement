@@ -18,7 +18,22 @@
 
 <div class="max-w-lg w-full" style="animation: fadeUp .6s ease-out">
 
-    <h1 class="text-3xl font-semibold mb-2 text-gray-900">Visitor Check-in</h1>
+    <!-- Logo -->
+    <div class="flex justify-center mb-6">
+        <img src="{{ asset('images/logo.svg') }}" alt="VMS Logo" class="h-20 w-20">
+    </div>
+
+    <h1 class="text-3xl font-semibold mb-2 text-gray-900 text-center">Visitor Check-in</h1>
+    
+    @if(session('checkin_location_name'))
+        <div class="mb-4 p-3 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+            </svg>
+            <span class="font-medium">Checking in at: {{ session('checkin_location_name') }}</span>
+        </div>
+    @endif
+
     <p class="text-gray-600 mb-6">
         Enter your email address or phone number.
         If you've visited before, we'll find your profile automatically.

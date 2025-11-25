@@ -9,9 +9,9 @@ use Flowframe\Trend\TrendValue;
 
 class VisitsOverTimeChart extends ChartWidget
 {
-    protected static ?string $heading = 'Visits Over Last 30 Days';
+    protected ?string $heading = 'Visits Over Last 30 Days';
     protected static ?int $sort = 4;
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
     public static function canView(): bool
     {
@@ -29,11 +29,14 @@ class VisitsOverTimeChart extends ChartWidget
         // Apply location scoping
         if (is_array($ids) && !empty($ids)) {
             $query->where(function ($q) use ($ids) {
-                $q->whereHas('staff.locations', function ($qr) use ($ids) {
-                    $qr->whereIn('locations.id', $ids);
-                })->orWhereHas('staff', function ($qr) use ($ids) {
-                    $qr->whereIn('assigned_location_id', $ids);
-                });
+                // Check if visit's location_id matches accessible locations
+                $q->whereIn('location_id', $ids)
+                  ->orWhereHas('staff.locations', function ($qr) use ($ids) {
+                      $qr->whereIn('locations.id', $ids);
+                  })
+                  ->orWhereHas('staff', function ($qr) use ($ids) {
+                      $qr->whereIn('assigned_location_id', $ids);
+                  });
             });
         }
 

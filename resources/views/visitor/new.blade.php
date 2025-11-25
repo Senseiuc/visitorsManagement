@@ -13,7 +13,20 @@
 
     <!-- Header -->
     <div class="mb-8 text-center">
+        <!-- Logo -->
+        <div class="flex justify-center mb-4">
+            <img src="{{ asset('images/logo.svg') }}" alt="VMS Logo" class="h-20 w-20">
+        </div>
+        
         <h1 class="text-3xl font-bold text-gray-800">New Visitor</h1>
+        @if(session('checkin_location_name'))
+            <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-800 rounded-full text-sm font-medium border border-amber-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                </svg>
+                {{ session('checkin_location_name') }}
+            </div>
+        @endif
         <p class="text-gray-600 mt-1">Please complete all steps to check in.</p>
     </div>
 
@@ -133,10 +146,21 @@
             <h2 class="text-lg font-semibold text-gray-700 mb-4">Visit Details</h2>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Staff Phone (optional)</label>
-                <input x-model="form.staff_phone" name="staff_phone" type="tel"
-                       placeholder="0801 234 5678"
-                       class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500">
+                <label class="block text-sm font-medium text-gray-700">Staff ID or Email <span class="text-gray-400">(optional)</span></label>
+                <div class="flex gap-2">
+                    <input x-model="staffQuery" @keydown.enter.prevent="lookupStaff" type="text"
+                           placeholder="Enter Staff ID or Email"
+                           class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500">
+                    <button type="button" @click="lookupStaff"
+                            class="mt-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Verify
+                    </button>
+                </div>
+                <p x-show="staffName" class="mt-2 text-sm text-green-600 font-medium">
+                    Verified: <span x-text="staffName"></span>
+                </p>
+                <p x-show="staffError" class="mt-2 text-sm text-red-600" x-text="staffError"></p>
+                <input type="hidden" name="staff_visited_id" x-model="form.staff_visited_id">
             </div>
 
             <div class="mt-4">
@@ -179,13 +203,33 @@
     function visitorForm() {
         return {
             step: 1,
+            staffQuery: '',
+            staffName: '',
+            staffError: '',
             form: {
                 first_name: '',
                 last_name: '',
                 email: '',
                 mobile: '',
-                staff_phone: '',
+                staff_visited_id: '',
                 reason_for_visit_id: '',
+            },
+
+            async lookupStaff() {
+                if (!this.staffQuery) return;
+                this.staffError = '';
+                this.staffName = '';
+                
+                try {
+                    const res = await fetch(`{{ route('visitor.staff-lookup') }}?query=${encodeURIComponent(this.staffQuery)}`);
+                    if (!res.ok) throw new Error('Staff not found');
+                    const data = await res.json();
+                    this.staffName = data.name;
+                    this.form.staff_visited_id = data.id;
+                } catch (e) {
+                    this.staffError = 'Staff member not found. Please check ID or Email.';
+                    this.form.staff_visited_id = '';
+                }
             },
 
             nextStep() {

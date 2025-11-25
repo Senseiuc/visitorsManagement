@@ -81,6 +81,13 @@ class UserResource extends Resource
                 ->maxLength(50)
                 ->nullable(),
 
+            Forms\Components\TextInput::make('staff_id')
+                ->label('Staff ID')
+                ->maxLength(50)
+                ->unique(ignoreRecord: true)
+                ->nullable()
+                ->helperText('Unique identifier for staff members (used for visitor check-in)'),
+
             Forms\Components\TextInput::make('password')
                 ->password()
                 ->revealable()
@@ -148,6 +155,10 @@ class UserResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('intercom')
                     ->label('Intercom')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('staff_id')
+                    ->label('Staff ID')
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TagsColumn::make('roles.name')
                     ->label('Roles')

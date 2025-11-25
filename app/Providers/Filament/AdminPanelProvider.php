@@ -40,6 +40,9 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->brandName('Visitor Management')
+            ->brandLogo(asset('images/logo.svg'))
+            ->brandLogoHeight('2.5rem')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -52,12 +55,20 @@ class AdminPanelProvider extends PanelProvider
             })
 //            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-//                AccountWidget::class,
-//                VisitorStatsWidget::class,
+                // Admin/SuperAdmin Widgets
+                \App\Filament\Widgets\VisitorStatsWidget::class,
+                \App\Filament\Widgets\TodayVisitsStatsWidget::class,
+                \App\Filament\Widgets\VisitsOverTimeChart::class,
+                \App\Filament\Widgets\TopVisitReasonsChart::class,
+                \App\Filament\Widgets\PeakVisitTimesChart::class,
+                \App\Filament\Widgets\AverageVisitDurationChart::class,
+                \App\Filament\Widgets\CheckedOutVisitsWidget::class,
+                \App\Filament\Widgets\RecentVisitorsWidget::class,
+                
+                // Receptionist Widgets
                 ReceptionistStats::class,
                 VisitsAwaitingApprovalWidget::class,
                 NotCheckedOutWidget::class,
-                RecentVisitorsWidget::class,
             ])
             ->userMenuItems([
                 'profile' => MenuItem::make()

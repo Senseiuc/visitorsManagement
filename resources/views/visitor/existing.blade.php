@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirm Your Visit</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <!-- Fade + Slide Animation -->
     <style>
@@ -24,10 +25,23 @@
 
     <!-- Header -->
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
+        <!-- Logo -->
+        <div class="flex justify-center mb-4">
+            <img src="{{ asset('images/logo.svg') }}" alt="VMS Logo" class="h-20 w-20">
+        </div>
+        
+        <h1 class="text-3xl font-bold text-gray-800 flex items-center justify-center gap-2">
             <span class="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
             Welcome back, {{ $visitor->full_name }}
         </h1>
+        @if(session('checkin_location_name'))
+            <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-800 rounded-full text-sm font-medium border border-amber-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                </svg>
+                {{ session('checkin_location_name') }}
+            </div>
+        @endif
         <p class="text-gray-600 mt-1">
             Enter the staff's phone number (optional) and choose your reason for visiting.
         </p>
@@ -51,16 +65,43 @@
             </div>
         @endif
 
-        <!-- Staff Phone -->
-        <div>
-            <label for="staff_phone" class="block text-sm font-medium text-gray-700">Staff phone number <span class="text-gray-400">(optional)</span></label>
-            <input id="staff_phone" name="staff_phone" type="tel"
-                   value="{{ old('staff_phone') }}"
-                   class="mt-1 block w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-500 transition"
-                   placeholder="0801 234 5678" />
-            <p class="text-xs text-gray-500 mt-1">
-                Helps us identify the staff you're meeting. You can leave it blank.
+        <!-- Staff Lookup -->
+        <div x-data="{ 
+            query: '', 
+            name: '', 
+            error: '', 
+            staffId: '',
+            async lookup() {
+                if (!this.query) return;
+                this.error = '';
+                this.name = '';
+                try {
+                    const res = await fetch(`{{ route('visitor.staff-lookup') }}?query=${encodeURIComponent(this.query)}`);
+                    if (!res.ok) throw new Error('Not found');
+                    const data = await res.json();
+                    this.name = data.name;
+                    this.staffId = data.id;
+                } catch (e) {
+                    this.error = 'Staff not found';
+                    this.staffId = '';
+                }
+            }
+        }">
+            <label class="block text-sm font-medium text-gray-700">Staff ID or Email <span class="text-gray-400">(optional)</span></label>
+            <div class="flex gap-2 mt-1">
+                <input x-model="query" @keydown.enter.prevent="lookup" type="text"
+                       class="block w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-500 transition"
+                       placeholder="Enter ID or Email" />
+                <button type="button" @click="lookup"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                    Verify
+                </button>
+            </div>
+            <p x-show="name" class="mt-2 text-sm text-green-600 font-medium">
+                Verified: <span x-text="name"></span>
             </p>
+            <p x-show="error" class="mt-2 text-sm text-red-600" x-text="error"></p>
+            <input type="hidden" name="staff_visited_id" x-model="staffId">
         </div>
 
         <!-- Reason -->

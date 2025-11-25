@@ -20,6 +20,9 @@ class Location extends Model
     protected static function booted(): void
     {
         static::creating(function (self $model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
             if (auth()->check() && empty($model->created_by_user_id)) {
                 $model->created_by_user_id = auth()->id();
             }

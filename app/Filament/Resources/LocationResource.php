@@ -65,6 +65,19 @@ class LocationResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('uuid')
+                    ->label('UUID')
+                    ->copyable()
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('checkin_link')
+                    ->label('Check-in Link')
+                    ->default(fn (Location $record) => route('visitor.location.start', $record->uuid))
+                    ->copyable()
+                    ->copyMessage('Check-in link copied')
+                    ->formatStateUsing(fn () => 'Copy Link')
+                    ->color('primary')
+                    ->url(fn (Location $record) => route('visitor.location.start', $record->uuid), true), // Open in new tab
                 Tables\Columns\TextColumn::make('address')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('floors_count')
                     ->counts('floors')

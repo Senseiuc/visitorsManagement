@@ -17,6 +17,13 @@ class RecentVisitorsWidget extends BaseWidget
     protected static ?int $sort = 8;
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+        // Show to admins and superadmins (monitoring widget)
+        return $user && ($user->isAdmin() || $user->isSuperAdmin());
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -70,6 +77,28 @@ class RecentVisitorsWidget extends BaseWidget
 
     protected function getTableQuery(): Builder
     {
-        return Visitor::query()->latest('created_at');
+        $query = Visitor::query()->latest('created_at');
+
+        // Apply location scoping
+        $user = auth()->user();
+        $ids = $user?->accessibleLocationIds();
+
+        if (is_array($ids) && !empty($ids)) {
+            $query->whereHas('visits', function ($q) use ($ids) {
+                $q->where(function ($subQ) use ($ids) {
+                    // Check if visit's location_id matches accessible locations
+                    $subQ->whereIn('location_id', $ids)
+                         // OR if staff belongs to accessible locations (for backward compatibility)
+                         ->orWhereHas('staff.locations', function ($qr) use ($ids) {
+                             $qr->whereIn('locations.id', $ids);
+                         })
+                         ->orWhereHas('staff', function ($qr) use ($ids) {
+                             $qr->whereIn('assigned_location_id', $ids);
+                         });
+                });
+            });
+        }
+
+        return $query;
     }
 }

@@ -14,6 +14,8 @@ use Filament\Tables\Table;
 
 class VisitorResource extends Resource
 {
+    use \App\Traits\HasImageUpload;
+
     protected static ?string $model = Visitor::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user';
@@ -23,15 +25,7 @@ class VisitorResource extends Resource
         return auth()->check();
     }
 
-    /**
-     * Detect if Cloudinary is properly configured
-     */
-    protected static function cloudinaryEnabled(): bool
-    {
-        return filled(config('cloudinary.cloud.cloud_name'))
-            && filled(config('cloudinary.cloud.api_key'))
-            && filled(config('cloudinary.cloud.api_secret'));
-    }
+
 
     /**
      * Filament v4 form schema (uses Schema object)
@@ -68,17 +62,7 @@ class VisitorResource extends Resource
                 ->extraInputAttributes(['capture' => 'environment']) // Enable camera on mobile
                 ->helperText('Upload or replace visitor photo')
                 ->saveUploadedFileUsing(function ($component, $file) {
-                    if (! static::cloudinaryEnabled()) {
-                        return $file->store('visitors', 'public');
-                    }
-
-                    // Upload to Cloudinary
-                    $upload = cloudinary()->upload(
-                        $file->getRealPath(),
-                        ['folder' => 'visitors']
-                    );
-
-                    return $upload->getSecurePath();
+                    return static::handleImageUpload($file);
                 }),
         ])->columns(2);
     }

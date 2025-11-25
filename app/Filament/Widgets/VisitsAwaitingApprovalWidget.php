@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 
 class VisitsAwaitingApprovalWidget extends BaseWidget
 {
+    use \App\Traits\HasImageUpload;
+
     protected static ?string $heading = 'Visits Awaiting Approval';
     protected static ?int $sort = 5;
     protected int|string|array $columnSpan = 'full';
@@ -21,7 +23,8 @@ class VisitsAwaitingApprovalWidget extends BaseWidget
     public static function canView(): bool
     {
         $user = auth()->user();
-        return $user && ($user->isReceptionist() || $user->isAdmin() || $user->isSuperAdmin());
+        // Only show to receptionists (operational widget)
+        return $user && $user->isReceptionist();
     }
 
     public function table(Table $table): Table
@@ -29,7 +32,14 @@ class VisitsAwaitingApprovalWidget extends BaseWidget
         return $table
             ->query($this->getTableQuery())
             ->columns([
-                Tables\Columns\TextColumn::make('visitor.full_name')->label('Visitor')->searchable(),
+                Tables\Columns\TextColumn::make('visitor.full_name')
+                    ->label('Visitor')
+                    ->searchable()
+                    ->description(fn (Visit $record) => $record->visitor->is_blacklisted 
+                        ? '⚠️ BLACKLISTED: ' . ($record->visitor->reasons_for_blacklisting ?: 'No reason provided')
+                        : null
+                    )
+                    ->color(fn (Visit $record) => $record->visitor->is_blacklisted ? 'danger' : null),
                 Tables\Columns\TextColumn::make('staff.name')
                     ->label('Staff')
                     ->formatStateUsing(fn ($state) => $state ?: '—')
@@ -46,63 +56,112 @@ class VisitsAwaitingApprovalWidget extends BaseWidget
                     ->color('success')
                     ->visible(fn () => Auth::user()?->hasPermission('visits.update') ?? false)
                     ->form(function (Visit $record) {
-                        $schema = [];
+                        return [
+                            Forms\Components\Placeholder::make('visitor_image_preview')
+                                ->label('Current Photo')
+                                ->content(function () use ($record) {
+                                    if (! $record->visitor->image_url) {
+                                        return new \Illuminate\Support\HtmlString('<span class="text-gray-500 italic">No photo available</span>');
+                                    }
+                                    return new \Illuminate\Support\HtmlString('<img src="' . e($record->visitor->image_url) . '" style="max-width: 150px; border-radius: 8px;" />');
+                                }),
 
-                        if (! $record->staff_visited_id) {
-                            $schema[] = Forms\Components\Select::make('staff_visited_id')
-                                ->label('Select staff to approve')
-                                ->options(fn () => User::query()->orderBy('name')->pluck('name', 'id')->all())
+                            Forms\Components\FileUpload::make('visitor_image')
+                                ->label('Upload Photo')
+                                ->image()
+                                ->directory('visitors')
+                                ->visibility('public')
+                                ->disk(static::cloudinaryEnabled() ? 'cloudinary' : 'public')
+                                ->imageEditor()
+                                ->required(fn () => blank($record->visitor->image_url)) // Required if no image exists
+                                ->helperText('Required if the visitor has no photo.')
+                                ->saveUploadedFileUsing(function ($file) {
+                                    return static::handleImageUpload($file);
+                                }),
+
+                            Forms\Components\Select::make('staff_visited_id')
+                                ->label('Staff Member')
+                                ->options(User::query()->orderBy('name')->pluck('name', 'id'))
+                                ->default($record->staff_visited_id)
                                 ->searchable()
-                                ->required();
-                        }
+                                ->required(),
 
-                        if (! $record->reason_for_visit_id) {
-                            $schema[] = Forms\Components\Select::make('reason_for_visit_id')
+                            Forms\Components\Select::make('location_id')
+                                ->label('Location')
+                                ->options(\App\Models\Location::query()->pluck('name', 'id'))
+                                ->default(function () use ($record) {
+                                    // Default to record's location, or staff's location, or session location
+                                    if ($record->location_id) return $record->location_id;
+                                    
+                                    $staff = $record->staff;
+                                    if ($staff && $staff->assigned_location_id) {
+                                        return $staff->assigned_location_id;
+                                    }
+
+                                    // Fallback to session location if available (from checkin controller)
+                                    return session('checkin_location_id');
+                                })
+                                ->searchable()
+                                ->required(),
+
+                            Forms\Components\TextInput::make('tag_number')
+                                ->label('Tag Number')
+                                ->default($record->tag_number)
+                                ->required()
+                                ->rule(function () use ($record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                        if (blank($value)) {
+                                            return;
+                                        }
+
+                                        // Check if tag is already assigned to an active visit
+                                        $existingVisit = \App\Models\Visit::query()
+                                            ->where('tag_number', $value)
+                                            ->where('id', '!=', $record->id)
+                                            ->where('status', 'approved')
+                                            ->whereNotNull('checkin_time')
+                                            ->whereNull('checkout_time')
+                                            ->first();
+
+                                        if ($existingVisit) {
+                                            $fail("Tag number {$value} is already assigned to an active visitor ({$existingVisit->visitor->full_name}).");
+                                        }
+                                    };
+                                }),
+
+                            Forms\Components\Select::make('reason_for_visit_id')
                                 ->label('Reason for Visit')
-                                ->options(fn () => \App\Models\ReasonForVisit::query()->pluck('name', 'id')->all())
+                                ->options(\App\Models\ReasonForVisit::query()->pluck('name', 'id'))
+                                ->default($record->reason_for_visit_id)
                                 ->searchable()
-                                ->required();
-                        }
-
-                        return $schema;
+                                ->required(),
+                        ];
                     })
                     ->requiresConfirmation()
+                    ->visible(fn (Visit $record) => !$record->visitor->is_blacklisted)
                     ->action(function (Visit $record, array $data) {
-                        // Check if visitor is blacklisted
-                        if ($record->visitor->is_blacklisted) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Visitor is Blacklisted')
-                                ->body('Reason: ' . $record->visitor->reasons_for_blacklisting)
-                                ->danger()
-                                ->persistent()
-                                ->send();
-                                
-                            return;
+
+                        // Update visitor image if uploaded
+                        if (! empty($data['visitor_image'])) {
+                            $imageUrl = static::getImageUrl($data['visitor_image']);
+                            $record->visitor->update(['image_url' => $imageUrl]);
                         }
 
-                        $updates = [];
+                        $updates = [
+                            'staff_visited_id' => $data['staff_visited_id'],
+                            'location_id' => $data['location_id'],
+                            'tag_number' => $data['tag_number'],
+                            'reason_for_visit_id' => $data['reason_for_visit_id'],
+                            'status' => 'approved',
+                            'checkin_time' => now(),
+                        ];
 
-                        // If staff not set yet, require it now before approval
-                        if (empty($record->staff_visited_id)) {
-                            $staffId = (int)($data['staff_visited_id'] ?? 0);
-                            if ($staffId > 0) {
-                                $updates['staff_visited_id'] = $staffId;
-                            }
-                        }
-
-                        // If reason not set yet, require it now
-                        if (empty($record->reason_for_visit_id)) {
-                            $reasonId = (int)($data['reason_for_visit_id'] ?? 0);
-                            if ($reasonId > 0) {
-                                $updates['reason_for_visit_id'] = $reasonId;
-                            }
-                        }
-
-                        // Set status approved and record check-in time now
-                        $updates['status'] = 'approved';
-                        $updates['checkin_time'] = now();
-
-                        $record->forceFill($updates)->save();
+                        $record->update($updates);
+                        
+                        \Filament\Notifications\Notification::make()
+                            ->title('Visit Approved')
+                            ->success()
+                            ->send();
                     }),
             ])
             ->bulkActions([
@@ -118,7 +177,23 @@ class VisitsAwaitingApprovalWidget extends BaseWidget
             ->where('status', 'pending')
             ->latest('created_at');
 
-        // TODO: If visits are associated to a location, scope by Auth::user()->accessibleLocationIds()
+        // Apply location scoping
+        $user = auth()->user();
+        $ids = $user?->accessibleLocationIds();
+
+        if (is_array($ids) && !empty($ids)) {
+            $query->where(function ($q) use ($ids) {
+                // Check if visit's location_id matches accessible locations
+                $q->whereIn('location_id', $ids)
+                  // OR if staff belongs to accessible locations (for backward compatibility)
+                  ->orWhereHas('staff.locations', function ($qr) use ($ids) {
+                      $qr->whereIn('locations.id', $ids);
+                  })
+                  ->orWhereHas('staff', function ($qr) use ($ids) {
+                      $qr->whereIn('assigned_location_id', $ids);
+                  });
+            });
+        }
 
         return $query;
     }

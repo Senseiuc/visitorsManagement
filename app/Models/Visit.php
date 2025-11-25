@@ -13,11 +13,12 @@ class Visit extends Model
     protected $fillable = [
         'visitor_id',
         'staff_visited_id',
+        'location_id',
         'reason_for_visit_id',
-        'tag_number',
-        'status',
         'checkin_time',
         'checkout_time',
+        'status',
+        'tag_number',
     ];
 
     protected $casts = [
@@ -36,10 +37,11 @@ class Visit extends Model
             }
         });
 
-        static::created(function (self $model) {
-            // Send notification to staff member when visit is created
-            if ($model->staff_visited_id && $model->staff) {
-                $model->staff->notify(new \App\Notifications\VisitCreatedNotification($model));
+        static::created(function (self $visit) {
+            try {
+                $visit->staff?->notify(new \App\Notifications\VisitCreatedNotification($visit));
+            } catch (\Throwable $e) {
+                // ignore notification failures
             }
         });
 
@@ -58,6 +60,11 @@ class Visit extends Model
     public function staff(): BelongsTo
     {
         return $this->belongsTo(User::class, 'staff_visited_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
     }
 
     public function reason(): BelongsTo

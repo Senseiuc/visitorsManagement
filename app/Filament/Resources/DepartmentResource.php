@@ -46,20 +46,47 @@ class DepartmentResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            Forms\Components\Select::make('location_id')
+                ->label('Location')
+                ->options(\App\Models\Location::all()->pluck('name', 'id'))
+                ->searchable()
+                ->preload()
+                ->live()
+                ->afterStateUpdated(fn ($set) => $set('floor_id', null))
+                ->dehydrated(false)
+                ->visible(fn () => auth()->user()->isSuperAdmin())
+                ->default(function ($record) {
+                    if ($record && $record->floor) {
+                        return $record->floor->location_id;
+                    }
+                    return null;
+                }),
             Forms\Components\Select::make('floor_id')
-                ->relationship('floor', 'name', modifyQueryUsing: function ($query) {
+                ->relationship('floor', 'name', modifyQueryUsing: function ($query, $get) {
                     $user = auth()->user();
+                    
+                    // If superadmin and location is selected, filter by location
+                    if ($user->isSuperAdmin()) {
+                        $locationId = $get('location_id');
+                        if ($locationId) {
+                            $query->where('location_id', $locationId);
+                        }
+                        return;
+                    }
+
+                    // For other roles, use accessible locations
                     if ($user && ($user->isAdmin() || $user->isReceptionist())) {
                         $ids = $user->accessibleLocationIds();
                         if ($ids === null) {
-                            return; // superadmin case
+                            return; // superadmin case (fallback)
                         }
                         $query->whereIn('location_id', $ids ?: [-1]);
                     }
                 })
                 ->required()
                 ->searchable()
-                ->preload(),
+                ->preload()
+                ->label('Floor'),
             Forms\Components\TextInput::make('name')
                 ->required()
                 ->maxLength(255),

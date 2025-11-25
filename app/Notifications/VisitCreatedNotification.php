@@ -55,9 +55,9 @@ class VisitCreatedNotification extends Notification implements ShouldQueue
             ->line('**Email:** ' . ($visitor->email ?? 'N/A'))
             ->line('**Phone:** ' . ($visitor->mobile ?? 'N/A'))
             ->line('**Reason:** ' . ($this->visit->reason->name ?? 'N/A'))
-            ->line('**Time:** ' . $this->visit->created_at->format('M d, Y h:i A'))
-            ->action('View Visit Details', url('/admin/visits/' . $this->visit->id))
-            ->line('Please approve or manage this visit from your dashboard.');
+            ->line('**Time:** ' . $this->visit->created_at->format('M d, Y h:i A'));
+//            ->action('View Visit Details', url('/admin/visits/' . $this->visit->id))
+//            ->line('Please approve or manage this visit from your dashboard.');
     }
 
     /**
@@ -69,8 +69,7 @@ class VisitCreatedNotification extends Notification implements ShouldQueue
         $visitorName = $visitor->full_name ?? 'A visitor';
         $reason = $this->visit->reason->name ?? 'visit';
 
-        $message = "VMS Alert: {$visitorName} has checked in for {$reason}. "
-            . "Please check your dashboard to approve.";
+        $message = "VMS Alert: {$visitorName} has checked in for {$reason}";
 
         return [
             'to' => $notifiable->phone_number,

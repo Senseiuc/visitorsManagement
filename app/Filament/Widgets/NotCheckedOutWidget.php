@@ -19,7 +19,8 @@ class NotCheckedOutWidget extends BaseWidget
     public static function canView(): bool
     {
         $user = auth()->user();
-        return $user && ($user->isReceptionist() || $user->isAdmin() || $user->isSuperAdmin());
+        // Only show to receptionists (operational widget)
+        return $user && $user->isReceptionist();
     }
 
     public function table(Table $table): Table
@@ -32,7 +33,7 @@ class NotCheckedOutWidget extends BaseWidget
                     ->label('Staff')
                     ->formatStateUsing(fn ($state) => $state ?: '—')
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('tag_number')->label('Tag #')->toggleable(),
+                Tables\Columns\TextColumn::make('tag_number')->label('Tag #')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('checkin_time')->label('Checked In')->dateTime()->sortable(),
             ])
             ->actions([
@@ -56,11 +57,28 @@ class NotCheckedOutWidget extends BaseWidget
     {
         $query = Visit::query()
             ->with(['visitor', 'staff'])
-            ->whereNull('checkout_time')
             ->where('status', 'approved')
+            ->whereNotNull('checkin_time')
+            ->whereNull('checkout_time')
             ->latest('checkin_time');
 
-        // TODO: If visits are associated to a location, scope by Auth::user()->accessibleLocationIds()
+        // Apply location scoping
+        $user = auth()->user();
+        $ids = $user?->accessibleLocationIds();
+
+        if (is_array($ids) && !empty($ids)) {
+            $query->where(function ($q) use ($ids) {
+                // Check if visit's location_id matches accessible locations
+                $q->whereIn('location_id', $ids)
+                  // OR if staff belongs to accessible locations (for backward compatibility)
+                  ->orWhereHas('staff.locations', function ($qr) use ($ids) {
+                      $qr->whereIn('locations.id', $ids);
+                  })
+                  ->orWhereHas('staff', function ($qr) use ($ids) {
+                      $qr->whereIn('assigned_location_id', $ids);
+                  });
+            });
+        }
 
         return $query;
     }

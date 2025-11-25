@@ -19,9 +19,36 @@ class VisitorCheckinController extends Controller
     /**
      * Step 1: Show a lookup form for an existing/new visitor by email or phone.
      */
+    /**
+     * Start check-in for a specific location via UUID.
+     */
+    public function startLocationCheckin(string $uuid): RedirectResponse
+    {
+        $location = \App\Models\Location::where('uuid', $uuid)->firstOrFail();
+        
+        // Store location in session
+        session(['checkin_location_id' => $location->id]);
+        session(['checkin_location_name' => $location->name]);
+
+        return redirect()->route('visitor.lookup');
+    }
+
+    /**
+     * Step 1: Show a lookup form for an existing/new visitor by email or phone.
+     */
     public function showLookup(): View
     {
-        return view('visitor.lookup');
+        if (! session()->has('checkin_location_id')) {
+            $defaultLocation = \App\Models\Location::first();
+            if ($defaultLocation) {
+                session(['checkin_location_id' => $defaultLocation->id]);
+                session(['checkin_location_name' => $defaultLocation->name]);
+            }
+        }
+
+        return view('visitor.lookup', [
+            'locationName' => session('checkin_location_name'),
+        ]);
     }
 
     /**
@@ -67,10 +94,13 @@ class VisitorCheckinController extends Controller
     public function showExisting(Request $request, Visitor $visitor): View
     {
         $reasons = ReasonForVisit::query()->orderBy('name')->pluck('name', 'id');
+        $locationId = session('checkin_location_id');
 
         return view('visitor.existing', [
             'visitor' => $visitor,
             'reasonOptions' => $reasons,
+            'locationName' => session('checkin_location_name'),
+            'locationId' => $locationId,
         ]);
     }
 
@@ -81,11 +111,47 @@ class VisitorCheckinController extends Controller
     {
         $reasons = ReasonForVisit::query()->orderBy('name')->pluck('name', 'id');
         $prefill = session('prefill', []);
+        $locationId = session('checkin_location_id');
 
         return view('visitor.new', [
             'reasonOptions' => $reasons,
             'prefill' => $prefill,
+            'locationName' => session('checkin_location_name'),
+            'locationId' => $locationId,
         ]);
+    }
+
+    /**
+     * AJAX Endpoint: Lookup staff by ID or Email.
+     */
+    public function lookupStaff(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = $request->query('query');
+        $locationId = session('checkin_location_id');
+
+        if (blank($query)) {
+            return response()->json(['error' => 'Query required'], 400);
+        }
+
+        $staff = User::query()
+            ->where(function ($q) use ($query) {
+                $q->where('email', $query)
+                  ->orWhere('staff_id', $query);
+            })
+            ->when($locationId, function ($q) use ($locationId) {
+                // Scope to location if set
+                $q->where(function ($sub) use ($locationId) {
+                    $sub->whereHas('locations', fn ($l) => $l->where('locations.id', $locationId))
+                        ->orWhere('assigned_location_id', $locationId);
+                });
+            })
+            ->first(['id', 'name', 'email', 'staff_id']);
+
+        if (! $staff) {
+            return response()->json(['error' => 'Staff not found'], 404);
+        }
+
+        return response()->json($staff);
     }
 
     /**
@@ -94,10 +160,10 @@ class VisitorCheckinController extends Controller
     public function postCheckin(Request $request): RedirectResponse
     {
         $mode = $request->input('mode'); // 'existing' or 'new'
+        $locationId = session('checkin_location_id');
 
         $rules = [
             'staff_visited_id' => ['nullable', 'exists:users,id'],
-            'staff_phone' => ['nullable', 'string', 'max:50'],
             'reason_for_visit_id' => ['nullable', 'exists:reasons_for_visit,id'],
         ];
 
@@ -115,71 +181,35 @@ class VisitorCheckinController extends Controller
 
         $data = $request->validate($rules);
 
+        $checkinService = new \App\Services\CheckinService();
+
         if ($mode === 'existing') {
             $visitor = Visitor::findOrFail((int) $data['visitor_id']);
         } else {
-            // If email/phone indicates existing, reuse it rather than duplicate
-            $existing = Visitor::query()
-                ->when(! empty($data['email'] ?? null), fn ($q) => $q->orWhere('email', $data['email']))
-                ->when(! empty($data['mobile'] ?? null), fn ($q) => $q->orWhere('mobile', $data['mobile']))
-                ->first();
-
-            if ($existing) {
-                $visitor = $existing;
-            } else {
-                $visitor = new Visitor();
-                $visitor->first_name = (string) $data['first_name'];
-                $visitor->last_name = (string) $data['last_name'];
-                $visitor->email = $data['email'] ?? null;
-                $visitor->mobile = $data['mobile'] ?? null;
-
-                if ($request->hasFile('image')) {
-                    // Try Cloudinary first; gracefully fall back to public disk if Cloudinary is not configured
-                    try {
-                        $disk = 'cloudinary';
-                        $path = $request->file('image')->store('visitors', $disk);
-                    } catch (ConfigurationException $e) {
-                        Log::warning('Cloudinary misconfigured, falling back to public disk for visitor image', [
-                            'exception' => $e->getMessage(),
-                        ]);
-                        $disk = 'public';
-                        $path = $request->file('image')->store('visitors', $disk);
-                    } catch (Throwable $e) {
-                        Log::warning('Image upload failed on cloudinary, falling back to public disk', [
-                            'exception' => $e->getMessage(),
-                        ]);
-                        $disk = 'public';
-                        $path = $request->file('image')->store('visitors', $disk);
-                    }
-                    // Store the complete publicly accessible URL, not just the storage path
-                    $visitor->image_url = Storage::disk($disk)->url($path);
-                }
-                $visitor->save();
-            }
+            $visitor = $checkinService->findOrCreateVisitor($data, $request->file('image'));
         }
 
-        // Resolve staff by explicit id or by provided phone number (optional)
-        $staffId = $data['staff_visited_id'] ?? null;
-        if (empty($staffId) && ! empty($data['staff_phone'] ?? null)) {
-            $phone = preg_replace('/\D+/', '', (string) $data['staff_phone']);
-            $candidates = User::query()
-                ->where('phone_number', $data['staff_phone'])
-                ->orWhere('phone_number', $phone)
-                ->pluck('id')
-                ->all();
-            if (count($candidates) === 1) {
-                $staffId = (int) $candidates[0];
-            }
+        // Validate no duplicate check-in
+        try {
+            $checkinService->validateDuplicateCheckin($visitor, $locationId);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
         }
 
-        // Create a pending visit (approved by receptionist later)
-        $visit = new Visit();
-        $visit->visitor_id = $visitor->id;
-        $visit->staff_visited_id = $staffId ? (int) $staffId : null;
-        $visit->reason_for_visit_id = $data['reason_for_visit_id'] ?? null;
-        $visit->status = 'pending';
-        $visit->checkin_time = null; // receptionist will approve and set check-in time
-        $visit->save();
+        // Validate staff belongs to location
+        $staffId = $data['staff_visited_id'] ? (int) $data['staff_visited_id'] : null;
+        try {
+            $checkinService->validateStaffLocation($staffId, $locationId);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        }
+
+        // Create visit
+        $visit = $checkinService->createVisit($visitor, [
+            'staff_visited_id' => $staffId,
+            'location_id' => $locationId,
+            'reason_for_visit_id' => $data['reason_for_visit_id'] ?? null,
+        ]);
 
         return redirect()->route('visitor.success')->with('visitor_name', $visitor->first_name . ' ' . $visitor->last_name);
     }

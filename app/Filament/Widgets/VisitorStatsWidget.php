@@ -20,17 +20,59 @@ class VisitorStatsWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        $totalVisitors = Visitor::query()->count();
+        $auth = auth()->user();
+        $ids = $auth?->accessibleLocationIds();
+
+        // Helper to apply location scoping
+        $applyLocationScope = function ($query) use ($ids) {
+            if (is_array($ids) && !empty($ids)) {
+                $query->whereHas('visits', function ($q) use ($ids) {
+                    $q->where(function ($subQ) use ($ids) {
+                        // Check if visit's location_id matches accessible locations
+                        $subQ->whereIn('location_id', $ids)
+                             ->orWhereHas('staff.locations', function ($qr) use ($ids) {
+                                 $qr->whereIn('locations.id', $ids);
+                             })
+                             ->orWhereHas('staff', function ($qr) use ($ids) {
+                                 $qr->whereIn('assigned_location_id', $ids);
+                             });
+                    });
+                });
+            }
+        };
+
+        // Helper for visits scope directly
+        $applyVisitScope = function ($query) use ($ids) {
+            if (is_array($ids) && !empty($ids)) {
+                $query->where(function ($q) use ($ids) {
+                    // Check if visit's location_id matches accessible locations
+                    $q->whereIn('location_id', $ids)
+                      ->orWhereHas('staff.locations', function ($qr) use ($ids) {
+                          $qr->whereIn('locations.id', $ids);
+                      })
+                      ->orWhereHas('staff', function ($qr) use ($ids) {
+                          $qr->whereIn('assigned_location_id', $ids);
+                      });
+                });
+            }
+        };
+
+        $totalVisitors = Visitor::query()
+            ->tap($applyLocationScope)
+            ->count();
         
         $thisWeekVisitors = Visitor::query()
+            ->tap($applyLocationScope)
             ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
             ->count();
 
         $blacklisted = Visitor::query()
+            ->tap($applyLocationScope)
             ->where('is_blacklisted', true)
             ->count();
 
         $activeVisits = Visit::query()
+            ->tap($applyVisitScope)
             ->where('status', 'approved')
             ->whereNull('checkout_time')
             ->whereNotNull('checkin_time')

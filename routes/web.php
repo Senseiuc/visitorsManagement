@@ -11,11 +11,15 @@ Route::get('/', function () {
 
 // Public visitor self check-in routes
 Route::get('/visitor', [VisitorCheckinController::class, 'showLookup'])->name('visitor.lookup');
+Route::get('/checkin/{uuid}', [VisitorCheckinController::class, 'startLocationCheckin'])->name('visitor.location.start');
 Route::post('/visitor', [VisitorCheckinController::class, 'postLookup'])->name('visitor.postLookup');
 Route::get('/visitor/existing/{visitor}', [VisitorCheckinController::class, 'showExisting'])->name('visitor.existing');
 Route::get('/visitor/new', [VisitorCheckinController::class, 'showNew'])->name('visitor.new');
 Route::post('/visitor/checkin', [VisitorCheckinController::class, 'postCheckin'])->name('visitor.checkin');
 Route::get('/visitor/success', [VisitorCheckinController::class, 'success'])->name('visitor.success');
+Route::get('/visitor/staff-lookup', [VisitorCheckinController::class, 'lookupStaff'])
+    ->name('visitor.staff-lookup')
+    ->middleware('throttle:60,1'); // 60 requests per minute
 
 // Securely serve local storage files limited to the 'imports' directory
 Route::get('/files/local', function (Request $request) {

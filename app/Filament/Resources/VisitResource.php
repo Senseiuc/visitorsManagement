@@ -24,6 +24,30 @@ class VisitResource extends Resource
         return auth()->check();
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if (! $user) {
+            return $query;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        // For Admin and Receptionist, scope by location
+        if ($user->isAdmin() || $user->isReceptionist()) {
+            $ids = $user->accessibleLocationIds();
+            if (is_array($ids) && ! empty($ids)) {
+                $query->whereIn('location_id', $ids);
+            }
+        }
+
+        return $query;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
@@ -143,16 +167,16 @@ class VisitResource extends Resource
             })
             ->columns([
                 Tables\Columns\TextColumn::make('visitor.full_name')->label('Visitor')->searchable(),
-                // Make staff editable inline
-                Tables\Columns\SelectColumn::make('staff_visited_id')
+                // Staff column - read-only, editable via approval modal
+                Tables\Columns\TextColumn::make('staff.name')
                     ->label('Staff')
-                    ->options(fn () => \App\Models\User::query()->orderBy('name')->pluck('name', 'id')->all())
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn ($state) => $state ?: '—'),
                 Tables\Columns\TextColumn::make('reason.name')->label('Reason')->toggleable(isToggledHiddenByDefault: true),
-                // Allow reception to enter tag number inline
-                \Filament\Tables\Columns\TextInputColumn::make('tag_number')
+                // Tag number - read-only, editable via approval modal
+                Tables\Columns\TextColumn::make('tag_number')
                     ->label('Tag')
-                    ->rules(['max:100'])
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('checkin_time')->dateTime()->sortable()->label('Check-in')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('checkout_time')->dateTime()->sortable()->label('Checkout')->toggleable(isToggledHiddenByDefault: true),
@@ -246,14 +270,127 @@ class VisitResource extends Resource
                 Actions\Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-m-check')
-                    ->visible(fn ($record) => $record->status !== 'approved')
-                    ->requiresConfirmation()
-                    ->action(function (Visit $record) {
-                        if (blank($record->checkin_time)) {
-                            $record->checkin_time = now();
+                    ->color('success')
+                    ->visible(fn ($record) => $record->status !== 'approved' && !$record->visitor->is_blacklisted)
+                    ->form(function (Visit $record) {
+                        // Check if visitor is blacklisted BEFORE showing form
+                        if ($record->visitor->is_blacklisted) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Cannot Approve - Visitor is Blacklisted')
+                                ->body('Reason: ' . ($record->visitor->reasons_for_blacklisting ?: 'No reason provided'))
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                                
+                            return [];
                         }
-                        $record->status = 'approved';
-                        $record->save();
+
+                        return [
+                            Forms\Components\Placeholder::make('visitor_image_preview')
+                                ->label('Current Photo')
+                                ->content(function () use ($record) {
+                                    if (! $record->visitor->image_url) {
+                                        return new \Illuminate\Support\HtmlString('<span class="text-gray-500 italic">No photo available</span>');
+                                    }
+                                    return new \Illuminate\Support\HtmlString('<img src="' . e($record->visitor->image_url) . '" style="max-width: 150px; border-radius: 8px;" />');
+                                }),
+
+                            Forms\Components\FileUpload::make('visitor_image')
+                                ->label('Upload Photo')
+                                ->image()
+                                ->directory('visitors')
+                                ->visibility('public')
+                                ->disk(config('cloudinary.cloud.cloud_name') ? 'cloudinary' : 'public')
+                                ->imageEditor()
+                                ->required(fn () => blank($record->visitor->image_url))
+                                ->helperText('Required if the visitor has no photo.'),
+
+                            Forms\Components\Select::make('staff_visited_id')
+                                ->label('Staff Member')
+                                ->relationship('staff', 'name')
+                                ->default($record->staff_visited_id)
+                                ->searchable()
+                                ->required(),
+
+                            Forms\Components\Select::make('location_id')
+                                ->label('Location')
+                                ->relationship('location', 'name')
+                                ->default(function () use ($record) {
+                                    if ($record->location_id) return $record->location_id;
+                                    $staff = $record->staff;
+                                    if ($staff && $staff->assigned_location_id) {
+                                        return $staff->assigned_location_id;
+                                    }
+                                    return session('checkin_location_id');
+                                })
+                                ->searchable()
+                                ->required(),
+
+                            Forms\Components\TextInput::make('tag_number')
+                                ->label('Tag Number')
+                                ->default($record->tag_number)
+                                ->required()
+                                ->rule(function () use ($record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                        if (blank($value)) {
+                                            return;
+                                        }
+                                        $existingVisit = \App\Models\Visit::query()
+                                            ->where('tag_number', $value)
+                                            ->where('id', '!=', $record->id)
+                                            ->where('status', 'approved')
+                                            ->whereNotNull('checkin_time')
+                                            ->whereNull('checkout_time')
+                                            ->first();
+                                        if ($existingVisit) {
+                                            $fail("Tag number {$value} is already assigned to an active visitor ({$existingVisit->visitor->full_name}).");
+                                        }
+                                    };
+                                }),
+
+                            Forms\Components\Select::make('reason_for_visit_id')
+                                ->label('Reason for Visit')
+                                ->relationship('reason', 'name')
+                                ->default($record->reason_for_visit_id)
+                                ->searchable()
+                                ->required(),
+                        ];
+                    })
+                    ->requiresConfirmation()
+                    ->action(function (Visit $record, array $data) {
+                        // Double-check if visitor is blacklisted
+                        if ($record->visitor->is_blacklisted) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Cannot Approve - Visitor is Blacklisted')
+                                ->body('Reason: ' . ($record->visitor->reasons_for_blacklisting ?: 'No reason provided'))
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                            return;
+                        }
+
+                        // Update visitor image if uploaded
+                        if (! empty($data['visitor_image'])) {
+                            $disk = config('cloudinary.cloud.cloud_name') ? 'cloudinary' : 'public';
+                            $imageUrl = \Illuminate\Support\Facades\Storage::disk($disk)->url($data['visitor_image']);
+                            $record->visitor->update(['image_url' => $imageUrl]);
+                        }
+
+                        $updates = [
+                            'staff_visited_id' => $data['staff_visited_id'],
+                            'location_id' => $data['location_id'],
+                            'tag_number' => $data['tag_number'],
+                            'reason_for_visit_id' => $data['reason_for_visit_id'],
+                            'status' => 'approved',
+                            'checkin_time' => now(),
+                        ];
+
+                        $record->update($updates);
+                        
+                        \Filament\Notifications\Notification::make()
+                            ->title('Visit Approved')
+                            ->success()
+                            ->send();
                     }),
                 Actions\EditAction::make(),
             ])

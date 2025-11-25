@@ -29,6 +29,7 @@ class User extends Authenticatable
         'permissions',
         'created_by_user_id',
         'role_id',
+        'staff_id',
     ];
 
     /**

@@ -13,7 +13,9 @@ class TodayVisitsStatsWidget extends BaseWidget
 
     public static function canView(): bool
     {
-        return auth()->check();
+        $user = auth()->user();
+        // Show to admins and superadmins (analytics widget)
+        return $user && ($user->isAdmin() || $user->isSuperAdmin());
     }
 
     protected function getStats(): array
@@ -25,11 +27,15 @@ class TodayVisitsStatsWidget extends BaseWidget
         $applyLocationScope = function ($query) use ($ids) {
             if (is_array($ids) && !empty($ids)) {
                 $query->where(function ($q) use ($ids) {
-                    $q->whereHas('staff.locations', function ($qr) use ($ids) {
-                        $qr->whereIn('locations.id', $ids);
-                    })->orWhereHas('staff', function ($qr) use ($ids) {
-                        $qr->whereIn('assigned_location_id', $ids);
-                    });
+                    // Check if visit's location_id matches accessible locations
+                    $q->whereIn('location_id', $ids)
+                      // OR if staff belongs to accessible locations (for backward compatibility)
+                      ->orWhereHas('staff.locations', function ($qr) use ($ids) {
+                          $qr->whereIn('locations.id', $ids);
+                      })
+                      ->orWhereHas('staff', function ($qr) use ($ids) {
+                          $qr->whereIn('assigned_location_id', $ids);
+                      });
                 });
             }
         };

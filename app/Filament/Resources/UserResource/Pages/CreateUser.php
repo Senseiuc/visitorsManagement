@@ -42,6 +42,12 @@ class CreateUser extends CreateRecord
     protected function afterCreate(): void
     {
         $auth = auth()->user();
+        
+        // Sync locations from form data (many-to-many relationship)
+        if (isset($this->data['locations']) && is_array($this->data['locations'])) {
+            $this->record->locations()->sync($this->data['locations']);
+        }
+        
         if ($auth && $auth->isAdmin()) {
             // Ensure only receptionist role is assigned when created by admin
             $receptionistId = Role::query()->where('slug', 'receptionist')->value('id');
@@ -68,13 +74,13 @@ class CreateUser extends CreateRecord
                 ->icon('heroicon-o-arrow-down-tray')
                 ->action(function () use ($user) {
                     $headers = [
-                        'staff name', 'dept', 'floor', 'intercom', 'gsm', 'email address', 'role',
+                        'staff name', 'staff id', 'dept', 'floor', 'intercom', 'gsm', 'email address', 'role',
                     ];
                     if ($user->isSuperAdmin()) {
                         $headers[] = 'location';
                     }
                     $csv = implode(',', array_map(fn ($h) => '"' . $h . '"', $headers)) . "\n";
-                    $csv .= '"Jane Doe","Sales","3","1234","08012345678","jane.doe@example.com","receptionist"';
+                    $csv .= '"Jane Doe","EMP001","Sales","3","1234","08012345678","jane.doe@example.com","receptionist"';
                     if ($user->isSuperAdmin()) {
                         $csv .= ',"HQ"';
                     }
@@ -98,7 +104,7 @@ class CreateUser extends CreateRecord
                         ->directory('imports')
                         ->disk('local')
                         ->required()
-                        ->helperText('Headers required: staff name, dept, floor, intercom, gsm, email address, role' . ($user->isSuperAdmin() ? ', location' : '') . '. Use CSV for best compatibility.'),
+                        ->helperText('Headers required: staff name, staff id (optional), dept, floor, intercom, gsm, email address, role' . ($user->isSuperAdmin() ? ', location' : '') . '. Use CSV for best compatibility.'),
                 ])
                 ->action(function (array $data) use ($user) {
                     $path = $data['import_file'] ?? null;
@@ -178,6 +184,7 @@ class CreateUser extends CreateRecord
             }
 
             $name = trim((string)($data['staff name'] ?? ''));
+            $staffId = trim((string)($data['staff id'] ?? ''));
             $email = trim((string)($data['email address'] ?? ''));
             $roleText = trim((string)($data['role'] ?? ''));
             $intercom = trim((string)($data['intercom'] ?? ''));
@@ -236,6 +243,7 @@ class CreateUser extends CreateRecord
             }
 
             $user->name = $name;
+            if ($staffId !== '') { $user->staff_id = $staffId; }
             if ($intercom !== '') { $user->intercom = $intercom; }
             if ($gsm !== '') { $user->phone_number = $gsm; }
             if ($assignedLocationId) { $user->assigned_location_id = $assignedLocationId; }
