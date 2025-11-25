@@ -6,6 +6,13 @@
     <title>Visitor Registration</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        .purple-ring:focus {
+            --tw-ring-color: #642d86;
+            border-color: #642d86;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-50 min-h-screen flex items-center justify-center py-10">
@@ -15,12 +22,12 @@
     <div class="mb-8 text-center">
         <!-- Logo -->
         <div class="flex justify-center mb-4">
-            <img src="{{ asset('images/logo.svg') }}" alt="VMS Logo" class="h-20 w-20">
+            <img src="{{ asset('images/image.png') }}" alt="VMS Logo" class="h-20 w-20">
         </div>
         
         <h1 class="text-3xl font-bold text-gray-800">New Visitor</h1>
         @if(session('checkin_location_name'))
-            <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-800 rounded-full text-sm font-medium border border-amber-200">
+            <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border" style="background-color: rgba(100, 45, 134, 0.1); color: #642d86; border-color: rgba(100, 45, 134, 0.3);">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                 </svg>
@@ -31,11 +38,10 @@
     </div>
 
     <!-- STEPPER -->
-    <!-- IMPROVED STEPPER -->
     <div class="relative mb-10">
         <!-- LINE -->
         <div class="absolute inset-x-0 top-5 h-1 bg-gray-200 rounded-full">
-            <div class="h-1 bg-amber-600 rounded-full transition-all duration-500"
+            <div class="h-1 rounded-full transition-all duration-500" style="background-color: #642d86;"
                  :style="`width: ${(step - 1) / 2 * 100}%`">
             </div>
         </div>
@@ -45,42 +51,36 @@
 
             <!-- Step 1 -->
             <div class="flex flex-col items-center w-1/3 text-center">
-                <div class="w-10 h-10 flex items-center justify-center rounded-full border-2
-                        transition-all duration-300"
-                     :class="step >= 1 ? 'bg-amber-600 text-white border-amber-600'
-                                   : 'bg-white text-gray-600 border-gray-300'">
+                <div class="w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300"
+                     :style="step >= 1 ? 'background-color: #642d86; color: white; border-color: #642d86' : 'background-color: white; color: #6b7280; border-color: #d1d5db'">
                     <span>1</span>
                 </div>
                 <p class="mt-2 text-sm font-medium"
-                   :class="step >= 1 ? 'text-amber-600' : 'text-gray-500'">
+                   :style="step >= 1 ? 'color: #642d86' : 'color: #6b7280'">
                     Personal
                 </p>
             </div>
 
             <!-- Step 2 -->
             <div class="flex flex-col items-center w-1/3 text-center">
-                <div class="w-10 h-10 flex items-center justify-center rounded-full border-2
-                        transition-all duration-300"
-                     :class="step >= 2 ? 'bg-amber-600 text-white border-amber-600'
-                                   : 'bg-white text-gray-600 border-gray-300'">
+                <div class="w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300"
+                     :style="step >= 2 ? 'background-color: #642d86; color: white; border-color: #642d86' : 'background-color: white; color: #6b7280; border-color: #d1d5db'">
                     <span>2</span>
                 </div>
                 <p class="mt-2 text-sm font-medium"
-                   :class="step >= 2 ? 'text-amber-600' : 'text-gray-500'">
+                   :style="step >= 2 ? 'color: #642d86' : 'color: #6b7280'">
                     Contact
                 </p>
             </div>
 
             <!-- Step 3 -->
             <div class="flex flex-col items-center w-1/3 text-center">
-                <div class="w-10 h-10 flex items-center justify-center rounded-full border-2
-                        transition-all duration-300"
-                     :class="step >= 3 ? 'bg-amber-600 text-white border-amber-600'
-                                   : 'bg-white text-gray-600 border-gray-300'">
+                <div class="w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300"
+                     :style="step >= 3 ? 'background-color: #642d86; color: white; border-color: #642d86' : 'background-color: white; color: #6b7280; border-color: #d1d5db'">
                     <span>3</span>
                 </div>
                 <p class="mt-2 text-sm font-medium"
-                   :class="step >= 3 ? 'text-amber-600' : 'text-gray-500'">
+                   :style="step >= 3 ? 'color: #642d86' : 'color: #6b7280'">
                     Visit Details
                 </p>
             </div>
@@ -102,13 +102,13 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">First name</label>
                     <input x-model="form.first_name" name="first_name"
-                           type="text" class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500" required>
+                           type="text" class="mt-1 w-full rounded-lg border-gray-300 purple-ring" required>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Last name</label>
                     <input x-model="form.last_name" name="last_name"
-                           type="text" class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500" required>
+                           type="text" class="mt-1 w-full rounded-lg border-gray-300 purple-ring" required>
                 </div>
             </div>
         </div>
@@ -121,14 +121,14 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email</label>
                     <input x-model="form.email" name="email" type="email"
-                           class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500"
+                           class="mt-1 w-full rounded-lg border-gray-300 purple-ring"
                            placeholder="you@example.com">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Phone</label>
                     <input x-model="form.mobile" name="mobile"
-                           type="text" class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500"
+                           type="text" class="mt-1 w-full rounded-lg border-gray-300 purple-ring"
                            placeholder="0801 234 5678">
                 </div>
             </div>
@@ -150,7 +150,7 @@
                 <div class="flex gap-2">
                     <input x-model="staffQuery" @keydown.enter.prevent="lookupStaff" type="text"
                            placeholder="Enter Staff ID or Email"
-                           class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500">
+                           class="mt-1 w-full rounded-lg border-gray-300 purple-ring">
                     <button type="button" @click="lookupStaff"
                             class="mt-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
                         Verify
@@ -166,7 +166,7 @@
             <div class="mt-4">
                 <label class="block text-sm font-medium text-gray-700">Reason for visit</label>
                 <select x-model="form.reason_for_visit_id" name="reason_for_visit_id"
-                        class="mt-1 w-full rounded-lg border-gray-300 focus:ring-amber-500">
+                        class="mt-1 w-full rounded-lg border-gray-300 purple-ring">
                     <option value="">Select a reason</option>
                     @foreach ($reasonOptions as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
@@ -183,7 +183,10 @@
             </button>
 
             <button type="button" x-show="step < 3" @click="nextStep"
-                    class="ml-auto px-6 py-2 rounded-lg bg-amber-600 text-white shadow hover:bg-amber-700">
+                    class="ml-auto px-6 py-2 rounded-lg text-white shadow transition"
+                    style="background-color: #642d86;"
+                    onmouseover="this.style.backgroundColor='#7d3aa3'"
+                    onmouseout="this.style.backgroundColor='#642d86'">
                 Continue
             </button>
 
@@ -195,7 +198,7 @@
     </form>
 
     <div class="mt-6 text-center">
-        <a href="{{ route('visitor.lookup') }}" class="text-amber-700 hover:underline text-sm">Back to Lookup</a>
+        <a href="{{ route('visitor.lookup') }}" class="text-sm transition" style="color: #642d86;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Back to Lookup</a>
     </div>
 </div>
 

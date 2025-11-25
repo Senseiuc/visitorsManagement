@@ -27,15 +27,15 @@
     <div class="mb-6">
         <!-- Logo -->
         <div class="flex justify-center mb-4">
-            <img src="{{ asset('images/logo.svg') }}" alt="VMS Logo" class="h-20 w-20">
+            <img src="{{ asset('images/image.png') }}" alt="VMS Logo" class="h-20 w-20">
         </div>
         
         <h1 class="text-3xl font-bold text-gray-800 flex items-center justify-center gap-2">
-            <span class="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+            <span class="inline-block w-2 h-2 rounded-full animate-pulse" style="background-color: #642d86;"></span>
             Welcome back, {{ $visitor->full_name }}
         </h1>
         @if(session('checkin_location_name'))
-            <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-800 rounded-full text-sm font-medium border border-amber-200">
+            <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border" style="background-color: rgba(100, 45, 134, 0.1); color: #642d86; border-color: rgba(100, 45, 134, 0.3);">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                 </svg>
@@ -90,7 +90,7 @@
             <label class="block text-sm font-medium text-gray-700">Staff ID or Email <span class="text-gray-400">(optional)</span></label>
             <div class="flex gap-2 mt-1">
                 <input x-model="query" @keydown.enter.prevent="lookup" type="text"
-                       class="block w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-500 transition"
+                       class="block w-full rounded-lg border-gray-300 transition" style="--tw-ring-color: #642d86;" onfocus="this.style.borderColor='#642d86'" onblur="this.style.borderColor=''"
                        placeholder="Enter ID or Email" />
                 <button type="button" @click="lookup"
                         class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
@@ -108,7 +108,7 @@
         <div>
             <label for="reason_for_visit_id" class="block text-sm font-medium text-gray-700">Reason for visit</label>
             <select id="reason_for_visit_id" name="reason_for_visit_id"
-                    class="mt-1 block w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-500 transition">
+                    class="mt-1 block w-full rounded-lg border-gray-300 transition" style="--tw-ring-color: #642d86;" onfocus="this.style.borderColor='#642d86'" onblur="this.style.borderColor=''">
                 <option value="">Select a reason</option>
                 @foreach ($reasonOptions as $id => $name)
                     <option value="{{ $id }}" @selected(old('reason_for_visit_id') == $id)>{{ $name }}</option>
@@ -119,7 +119,7 @@
         <!-- Submit -->
         <div class="pt-2">
             <button type="submit"
-                    class="w-full flex justify-center items-center gap-2 px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow transition">
+                    class="w-full flex justify-center items-center gap-2 px-4 py-3 text-white rounded-lg shadow transition" style="background-color: #642d86;" onmouseover="this.style.backgroundColor='#7d3aa3'" onmouseout="this.style.backgroundColor='#642d86'">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                      stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -133,7 +133,7 @@
     <!-- Footer -->
     <div class="mt-6 text-center">
         <a href="{{ route('visitor.lookup') }}"
-           class="text-amber-700 hover:text-amber-900 hover:underline text-sm transition">
+           class="text-sm transition" style="color: #642d86;" onmouseover="this.style.textDecoration='underline'; this.style.color='#7d3aa3'" onmouseout="this.style.textDecoration='none'; this.style.color='#642d86'">
             Not you? Go back
         </a>
     </div>

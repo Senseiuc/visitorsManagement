@@ -27,14 +27,14 @@
 
         <!-- Logo -->
         <div class="flex justify-center mb-6">
-            <img src="{{ asset('images/logo.svg') }}" alt="VMS Logo" class="h-16 w-16">
+            <img src="{{ asset('images/image.png') }}" alt="VMS Logo" class="h-16 w-16">
         </div>
 
         <!-- Animated Checkmark -->
         <div class="flex justify-center">
-            <div class="h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center"
-                 style="animation: pop .6s ease-out .1s both;">
-                <svg class="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24"
+            <div class="h-14 w-14 rounded-full flex items-center justify-center"
+                 style="background-color: rgba(100, 45, 134, 0.1); animation: pop .6s ease-out .1s both;">
+                <svg class="h-8 w-8" style="color: #642d86;" fill="none" viewBox="0 0 24 24"
                      stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M5 13l4 4L19 7" />
@@ -53,7 +53,7 @@
         <!-- Button -->
         <div class="mt-8">
             <a href="{{ route('visitor.lookup') }}"
-               class="block w-full text-center px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow-sm transition">
+               class="block w-full text-center px-4 py-3 text-white font-medium rounded-lg shadow-sm transition" style="background-color: #642d86;" onmouseover="this.style.backgroundColor='#7d3aa3'" onmouseout="this.style.backgroundColor='#642d86'">
                 New Check-in
             </a>
         </div>
