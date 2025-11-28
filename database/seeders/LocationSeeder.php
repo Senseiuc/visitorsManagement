@@ -16,6 +16,7 @@ class LocationSeeder extends Seeder
     {
         // Head Office
         $headOffice = Location::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
             'name' => 'Head Office',
             'address' => '123 Corporate Drive, Lagos',
         ]);
@@ -32,6 +33,7 @@ class LocationSeeder extends Seeder
 
         // Branch A
         $branchA = Location::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
             'name' => 'Branch A',
             'address' => '456 Business Avenue, Abuja',
         ]);
@@ -44,6 +46,7 @@ class LocationSeeder extends Seeder
 
         // Branch B
         $branchB = Location::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
             'name' => 'Branch B',
             'address' => '789 Commerce Street, Port Harcourt',
         ]);

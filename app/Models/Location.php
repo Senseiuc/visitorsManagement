@@ -15,19 +15,25 @@ class Location extends Model
     protected $fillable = [
         'name',
         'address',
+        'uuid',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (self $model) {
+            // Always generate UUID, even in seeders
             if (empty($model->uuid)) {
                 $model->uuid = (string) \Illuminate\Support\Str::uuid();
             }
-            if (auth()->check() && empty($model->created_by_user_id)) {
-                $model->created_by_user_id = auth()->id();
-            }
-            if (auth()->check() && empty($model->updated_by_user_id)) {
-                $model->updated_by_user_id = auth()->id();
+            
+            // Set audit fields only if user is authenticated
+            if (auth()->check()) {
+                if (empty($model->created_by_user_id)) {
+                    $model->created_by_user_id = auth()->id();
+                }
+                if (empty($model->updated_by_user_id)) {
+                    $model->updated_by_user_id = auth()->id();
+                }
             }
         });
 

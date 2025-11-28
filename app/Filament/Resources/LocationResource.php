@@ -72,7 +72,7 @@ class LocationResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('checkin_link')
                     ->label('Check-in Link')
-                    ->default(fn (Location $record) => route('visitor.location.start', $record->uuid))
+                    ->getStateUsing(fn (Location $record) => route('visitor.location.start', $record->uuid))
                     ->copyable()
                     ->copyMessage('Check-in link copied')
                     ->formatStateUsing(fn () => 'Copy Link')

@@ -25,8 +25,8 @@ class SuperAdminSeeder extends Seeder
 
         // 2) Create or update a Super Admin user and assign the role
         $name = 'Super Admin';
-        $email = 'nwadialugideon@gmail.com';
-        $password = 'phiction1996';
+        $email = 'admin@vms.com';
+        $password = 'vms@2025';
 
         $user = User::query()->updateOrCreate(
             ['email' => $email],
