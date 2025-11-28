@@ -54,10 +54,10 @@ class ReceptionistStats extends BaseWidget
             ->whereNull('checkout_time')
             ->count();
 
-        // Today's visits (by created_at date - when visit was requested)
+        // Today's visits (by checkin_time date - when visitor actually checked in)
         $today = Visit::query()
             ->tap($applyLocationScope)
-            ->whereDate('created_at', now()->toDateString())
+            ->whereDate('checkin_time', now()->toDateString())
             ->count();
 
         return [

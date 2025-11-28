@@ -15,6 +15,7 @@ class NotCheckedOutWidget extends BaseWidget
     protected static ?string $heading = "Visitors Still On-site";
     protected static ?int $sort = 7;
     protected int|string|array $columnSpan = 'full';
+    protected ?string $pollingInterval = '30s';
 
     public static function canView(): bool
     {

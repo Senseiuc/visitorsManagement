@@ -16,6 +16,7 @@ class RecentVisitorsWidget extends BaseWidget
     protected static ?string $heading = 'Recent Visitors';
     protected static ?int $sort = 8;
     protected int|string|array $columnSpan = 'full';
+    protected ?string $pollingInterval = '30s';
 
     public static function canView(): bool
     {

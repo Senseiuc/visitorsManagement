@@ -40,23 +40,23 @@ class TodayVisitsStatsWidget extends BaseWidget
             }
         };
 
-        // Today's total visits
+        // Today's total visits (by checkin_time)
         $todayTotal = Visit::query()
             ->tap($applyLocationScope)
-            ->whereDate('created_at', today())
+            ->whereDate('checkin_time', today())
             ->count();
 
-        // Today's approved visits
+        // Today's approved visits (by checkin_time)
         $todayApproved = Visit::query()
             ->tap($applyLocationScope)
-            ->whereDate('created_at', today())
+            ->whereDate('checkin_time', today())
             ->where('status', 'approved')
             ->count();
 
-        // Today's pending visits
+        // Today's pending visits (by checkin_time)
         $todayPending = Visit::query()
             ->tap($applyLocationScope)
-            ->whereDate('created_at', today())
+            ->whereDate('checkin_time', today())
             ->where('status', 'pending')
             ->count();
 

@@ -19,6 +19,7 @@ class VisitsAwaitingApprovalWidget extends BaseWidget
     protected static ?string $heading = 'Visits Awaiting Approval';
     protected static ?int $sort = 5;
     protected int|string|array $columnSpan = 'full';
+    protected ?string $pollingInterval = '30s';
 
     public static function canView(): bool
     {
