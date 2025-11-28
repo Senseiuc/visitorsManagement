@@ -16,6 +16,8 @@ namespace League\Uri\Components;
 use Deprecated;
 use League\Uri\Contracts\AuthorityInterface;
 use League\Uri\Contracts\IpHostInterface;
+use League\Uri\Contracts\UriComponentInterface;
+use League\Uri\Contracts\UriException;
 use League\Uri\Contracts\UriInterface;
 use League\Uri\Exceptions\ConversionFailed;
 use League\Uri\Exceptions\MissingFeature;
@@ -23,20 +25,25 @@ use League\Uri\Exceptions\SyntaxError;
 use League\Uri\Idna\Converter as IdnConverter;
 use League\Uri\IPv4\Converter as IPv4Converter;
 use League\Uri\IPv4Normalizer;
-use League\Uri\Uri;
+use League\Uri\UriString;
 use Psr\Http\Message\UriInterface as Psr7UriInterface;
 use Stringable;
+use Uri\Rfc3986\Uri as Rfc3986Uri;
+use Uri\WhatWg\Url as WhatWgUrl;
 
 use function explode;
 use function filter_var;
 use function in_array;
 use function inet_pton;
+use function is_string;
 use function preg_match;
+use function preg_replace_callback;
 use function rawurldecode;
 use function rawurlencode;
 use function sprintf;
 use function strpos;
 use function strtolower;
+use function strtoupper;
 use function substr;
 
 use const FILTER_FLAG_IPV4;
@@ -261,6 +268,18 @@ final class Host extends Component implements IpHostInterface
     }
 
     /**
+     * Create a new instance from a string.or a stringable structure or returns null on failure.
+     */
+    public static function tryNew(Stringable|string|null $uri = null): ?self
+    {
+        try {
+            return self::new($uri);
+        } catch (UriException) {
+            return null;
+        }
+    }
+
+    /**
      * Returns a host from an IP address.
      *
      * @throws MissingFeature If detecting IPv4 is not possible
@@ -294,13 +313,15 @@ final class Host extends Component implements IpHostInterface
     /**
      * Create a new instance from a URI object.
      */
-    public static function fromUri(Stringable|string $uri): self
+    public static function fromUri(WhatWgUrl|Rfc3986Uri|Stringable|string $uri): self
     {
         $uri = self::filterUri($uri);
 
         return match (true) {
-            $uri instanceof UriInterface => new self($uri->getHost()),
-            default => new self(Uri::new($uri)->getHost()),
+            $uri instanceof Rfc3986Uri => new self($uri->getRawHost()),
+            $uri instanceof WhatWgUrl => new self($uri->getAsciiHost()),
+            $uri instanceof Psr7UriInterface => new self(UriString::parse($uri)['host']),
+            default => new self($uri->getHost()),
         };
     }
 
@@ -320,6 +341,22 @@ final class Host extends Component implements IpHostInterface
         return $this->host;
     }
 
+    public function equals(mixed $value): bool
+    {
+        if (!$value instanceof Stringable && !is_string($value) && null !== $value) {
+            return false;
+        }
+
+        if (!$value instanceof UriComponentInterface) {
+            $value = self::tryNew($value);
+            if (null === $value) {
+                return false;
+            }
+        }
+
+        return $value->getUriComponent() === $this->getUriComponent();
+    }
+
     public function toAscii(): ?string
     {
         return $this->value();
@@ -331,6 +368,19 @@ final class Host extends Component implements IpHostInterface
             null !== $this->ipVersion,
             null === $this->host => $this->host,
             default => IdnConverter::toUnicode($this->host)->domain(),
+        };
+    }
+
+    public function encoded(): ?string
+    {
+        return match (true) {
+            null !== $this->ipVersion,
+            null === $this->host => $this->host,
+            default => (string) preg_replace_callback(
+                '/%[0-9A-F]{2}/i',
+                fn (array $matches) => strtoupper($matches[0]),
+                strtolower(rawurlencode(IdnConverter::toUnicode($this->host)->domain()))
+            ),
         };
     }
 

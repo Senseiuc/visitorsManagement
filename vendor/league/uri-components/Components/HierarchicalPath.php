@@ -17,6 +17,7 @@ use Deprecated;
 use Iterator;
 use League\Uri\Contracts\PathInterface;
 use League\Uri\Contracts\SegmentedPathInterface;
+use League\Uri\Contracts\UriException;
 use League\Uri\Contracts\UriInterface;
 use League\Uri\Encoder;
 use League\Uri\Exceptions\OffsetOutOfBounds;
@@ -24,6 +25,8 @@ use League\Uri\Exceptions\SyntaxError;
 use Psr\Http\Message\UriInterface as Psr7UriInterface;
 use Stringable;
 use TypeError;
+use Uri\Rfc3986\Uri as Rfc3986Uri;
+use Uri\WhatWg\Url as WhatWgUrl;
 
 use function array_count_values;
 use function array_filter;
@@ -80,9 +83,21 @@ final class HierarchicalPath extends Component implements SegmentedPathInterface
     }
 
     /**
+     * Create a new instance from a string.or a stringable structure or returns null on failure.
+     */
+    public static function tryNew(Stringable|string $uri = ''): ?self
+    {
+        try {
+            return self::new($uri);
+        } catch (UriException) {
+            return null;
+        }
+    }
+
+    /**
      * Create a new instance from a URI object.
      */
-    public static function fromUri(Stringable|string $uri): self
+    public static function fromUri(WhatWgUrl|Rfc3986Uri|Stringable|string $uri): self
     {
         return new self(Path::fromUri($uri));
     }
@@ -146,9 +161,19 @@ final class HierarchicalPath extends Component implements SegmentedPathInterface
         return $this->path->value();
     }
 
+    public function equals(mixed $value): bool
+    {
+        return $this->path->equals($value);
+    }
+
     public function decoded(): string
     {
         return $this->path->decoded();
+    }
+
+    public function normalize(): self
+    {
+        return new self((string) $this->path->normalize()->value());
     }
 
     public function getDirname(): string
