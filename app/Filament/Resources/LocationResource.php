@@ -74,6 +74,7 @@ class LocationResource extends Resource
                     ->label('Check-in Link')
                     ->getStateUsing(fn (Location $record) => route('visitor.location.start', $record->uuid))
                     ->copyable()
+                    ->copyableState(fn (Location $record) => route('visitor.location.start', $record->uuid))
                     ->copyMessage('Check-in link copied')
                     ->formatStateUsing(fn () => 'Copy Link')
                     ->color('primary')
