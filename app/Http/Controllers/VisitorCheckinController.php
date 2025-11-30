@@ -25,7 +25,7 @@ class VisitorCheckinController extends Controller
     public function startLocationCheckin(string $uuid): RedirectResponse
     {
         $location = \App\Models\Location::where('uuid', $uuid)->firstOrFail();
-        
+
         // Store location in session
         session(['checkin_location_id' => $location->id]);
         session(['checkin_location_name' => $location->name]);
@@ -175,6 +175,7 @@ class VisitorCheckinController extends Controller
                 'last_name' => ['required', 'string', 'max:255'],
                 'email' => ['nullable', 'email', 'max:255'],
                 'mobile' => ['nullable', 'string', 'max:50'],
+                'organization' => ['nullable', 'string', 'max:255'],
                 'image' => ['nullable', 'image', 'max:5120'], // 5MB
             ]);
         }

@@ -38,6 +38,7 @@ class CheckinService
         $visitor->last_name = (string) $data['last_name'];
         $visitor->email = $data['email'] ?? null;
         $visitor->mobile = $data['mobile'] ?? null;
+        $visitor->organization = $data['organization'] ?? null;
 
         if ($imageFile) {
             try {
@@ -65,7 +66,7 @@ class CheckinService
 
     /**
      * Validate that visitor doesn't have an active check-in at the location
-     * 
+     *
      * @throws ValidationException
      */
     public function validateDuplicateCheckin(Visitor $visitor, ?int $locationId): void
@@ -104,7 +105,7 @@ class CheckinService
 
     /**
      * Validate that staff belongs to the location
-     * 
+     *
      * @throws ValidationException
      */
     public function validateStaffLocation(?int $staffId, ?int $locationId): void

@@ -6,7 +6,7 @@
     <title>Visitor Registration</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
+
     <style>
         .purple-ring:focus {
             --tw-ring-color: #642d86;
@@ -24,7 +24,7 @@
         <div class="flex justify-center mb-4">
             <img src="{{ asset('images/image.png') }}" alt="VMS Logo" class="h-20 w-20">
         </div>
-        
+
         <h1 class="text-3xl font-bold text-gray-800">New Visitor</h1>
         @if(session('checkin_location_name'))
             <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border" style="background-color: rgba(100, 45, 134, 0.1); color: #642d86; border-color: rgba(100, 45, 134, 0.3);">
@@ -110,6 +110,13 @@
                     <input x-model="form.last_name" name="last_name"
                            type="text" class="mt-1 w-full rounded-lg border-gray-300 purple-ring" required>
                 </div>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700">Organization <span class="text-gray-400">(optional)</span></label>
+                <input x-model="form.organization" name="organization" type="text"
+                       class="mt-1 w-full rounded-lg border-gray-300 purple-ring"
+                       placeholder="Company / Organization name">
             </div>
         </div>
 
@@ -214,6 +221,7 @@
                 last_name: '',
                 email: '',
                 mobile: '',
+                organization: '',
                 staff_visited_id: '',
                 reason_for_visit_id: '',
             },
@@ -222,7 +230,7 @@
                 if (!this.staffQuery) return;
                 this.staffError = '';
                 this.staffName = '';
-                
+
                 try {
                     const res = await fetch(`{{ route('visitor.staff-lookup') }}?query=${encodeURIComponent(this.staffQuery)}`);
                     if (!res.ok) throw new Error('Staff not found');

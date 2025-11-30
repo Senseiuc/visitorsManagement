@@ -16,6 +16,7 @@ class Visitor extends Model
         'last_name',
         'email',
         'mobile',
+        'organization',
         'image_url',
         'is_blacklisted',
         'reasons_for_blacklisting',

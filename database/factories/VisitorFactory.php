@@ -24,6 +24,7 @@ class VisitorFactory extends Factory
             'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
             'mobile' => fake()->phoneNumber(),
+            'organization' => fake()->optional(0.7)->company(),
             'image_url' => fake()->optional(0.3)->imageUrl(200, 200, 'people'),
             'is_blacklisted' => false,
             'reasons_for_blacklisting' => null,

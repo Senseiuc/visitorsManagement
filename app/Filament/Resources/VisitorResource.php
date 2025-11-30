@@ -49,6 +49,10 @@ class VisitorResource extends Resource
                 ->tel()
                 ->maxLength(50),
 
+            Forms\Components\TextInput::make('organization')
+                ->label('Organization')
+                ->maxLength(255),
+
             Forms\Components\FileUpload::make('image_url')
                 ->label('Visitor Image')
                 ->image()
@@ -86,6 +90,8 @@ class VisitorResource extends Resource
                         \Filament\Infolists\Components\TextEntry::make('last_name'),
                         \Filament\Infolists\Components\TextEntry::make('email'),
                         \Filament\Infolists\Components\TextEntry::make('mobile'),
+                        \Filament\Infolists\Components\TextEntry::make('organization')
+                            ->label('Organization'),
                         \Filament\Infolists\Components\TextEntry::make('created_at')
                             ->dateTime(),
                     ])->columns(2),
@@ -119,6 +125,11 @@ class VisitorResource extends Resource
 
                 Tables\Columns\TextColumn::make('mobile')
                     ->label('Mobile')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('organization')
+                    ->label('Organization')
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('visits_count')
@@ -176,7 +187,7 @@ class VisitorResource extends Resource
             ->actions([
                 Actions\ViewAction::make(),
                 Actions\EditAction::make(),
-                
+
                 // Admin: Direct Blacklist
                 Actions\Action::make('blacklist')
                     ->label('Blacklist')
@@ -204,8 +215,8 @@ class VisitorResource extends Resource
                     ->icon('heroicon-o-exclamation-triangle')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->visible(fn (Visitor $record) => 
-                        ! auth()->user()->hasPermission('blacklist.update') && 
+                    ->visible(fn (Visitor $record) =>
+                        ! auth()->user()->hasPermission('blacklist.update') &&
                         ! $record->is_blacklisted &&
                         $record->blacklist_request_status !== 'pending'
                     )
@@ -221,7 +232,7 @@ class VisitorResource extends Resource
                             'blacklist_requested_by' => auth()->id(),
                             'blacklist_requested_at' => now(),
                         ]);
-                        
+
                         \Filament\Notifications\Notification::make()
                             ->title('Blacklist Request Submitted')
                             ->success()
@@ -234,8 +245,8 @@ class VisitorResource extends Resource
                     ->icon('heroicon-o-check-badge')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->visible(fn (Visitor $record) => 
-                        auth()->user()->hasPermission('blacklist.update') && 
+                    ->visible(fn (Visitor $record) =>
+                        auth()->user()->hasPermission('blacklist.update') &&
                         $record->blacklist_request_status === 'pending' &&
                         ! $record->is_blacklisted
                     )
