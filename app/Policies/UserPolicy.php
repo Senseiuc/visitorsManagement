@@ -21,7 +21,7 @@ class UserPolicy
 
     public function viewAny(User $user): Response
     {
-        if ($user->isAdmin() && $user->hasAnyPermission(['users.view'])) {
+        if ($user->hasPermission('users.view')) {
             return Response::allow();
         }
 
@@ -30,25 +30,26 @@ class UserPolicy
 
     public function view(User $user, User $model): Response
     {
-        if ($user->isAdmin() && $user->hasAnyPermission(['users.view'])) {
-            // Admins can view receptionists they created or who share any of their accessible locations
-            $adminLocs = $user->locationIds();
+        if ($user->hasPermission('users.view')) {
+            // Can view if shares location
+            $userLocs = $user->locationIds();
             $targetLocs = $model->locationIds();
-            $sharesLocation = count(array_intersect($adminLocs, $targetLocs)) > 0;
+            $sharesLocation = count(array_intersect($userLocs, $targetLocs)) > 0;
 
-            $can = $model->isReceptionist() && ($model->created_by_user_id === $user->id || $sharesLocation);
+            // Cannot view superadmins unless you are one (handled by before)
+            if ($model->isSuperAdmin()) {
+                return Response::deny();
+            }
 
-            return $can ? Response::allow() : Response::deny();
+            return $sharesLocation ? Response::allow() : Response::deny();
         }
 
-        // Receptionists cannot view other users in admin panel
         return Response::deny();
     }
 
     public function create(User $user): Response
     {
-        if ($user->isAdmin() && $user->hasAnyPermission(['users.create'])) {
-            // Admins can create only receptionists and only in their location
+        if ($user->hasPermission('users.create')) {
             return Response::allow();
         }
 
@@ -57,16 +58,18 @@ class UserPolicy
 
     public function update(User $user, User $model): Response
     {
-        if ($user->isAdmin() && $user->hasAnyPermission(['users.update'])) {
-            // Admins can update only receptionists they created or who share any of their accessible locations
-            $adminLocs = $user->locationIds();
+        if ($user->hasPermission('users.update')) {
+            // Can update if shares location
+            $userLocs = $user->locationIds();
             $targetLocs = $model->locationIds();
-            $sharesLocation = count(array_intersect($adminLocs, $targetLocs)) > 0;
+            $sharesLocation = count(array_intersect($userLocs, $targetLocs)) > 0;
 
-            $can = $model->isReceptionist() && ($model->created_by_user_id === $user->id || $sharesLocation);
+            // Cannot update superadmins
+            if ($model->isSuperAdmin()) {
+                return Response::deny();
+            }
 
-            // Admins cannot change superadmins/admins, and cannot update other admins
-            return $can ? Response::allow() : Response::deny();
+            return $sharesLocation ? Response::allow() : Response::deny();
         }
 
         return Response::deny();
@@ -78,14 +81,16 @@ class UserPolicy
             return Response::deny(); // cannot delete self
         }
 
-        if ($user->isAdmin() && $user->hasAnyPermission(['users.delete'])) {
-            $adminLocs = $user->locationIds();
+        if ($user->hasPermission('users.delete')) {
+            $userLocs = $user->locationIds();
             $targetLocs = $model->locationIds();
-            $sharesLocation = count(array_intersect($adminLocs, $targetLocs)) > 0;
+            $sharesLocation = count(array_intersect($userLocs, $targetLocs)) > 0;
 
-            $can = $model->isReceptionist() && ($model->created_by_user_id === $user->id || $sharesLocation);
+            if ($model->isSuperAdmin()) {
+                return Response::deny();
+            }
 
-            return $can ? Response::allow() : Response::deny();
+            return $sharesLocation ? Response::allow() : Response::deny();
         }
 
         return Response::deny();
@@ -93,7 +98,7 @@ class UserPolicy
 
     public function deleteAny(User $user): Response
     {
-        if ($user->isAdmin() && $user->hasAnyPermission(['users.delete'])) {
+        if ($user->hasPermission('users.delete')) {
             return Response::allow();
         }
 

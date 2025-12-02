@@ -35,27 +35,27 @@ class UserResource extends Resource
             return $query;
         }
 
-        if ($user->isAdmin()) {
-            // Admins can only see receptionists they created or who share any of their accessible locations
-            $ids = $user->accessibleLocationIds() ?? [];
-            return $query
-                ->where(function ($q) {
-                    $q->whereHas('roles', function ($qr) {
-                        $qr->where('slug', 'receptionist');
-                    })->orWhereHas('roleRelation', function ($qr) {
-                        $qr->where('slug', 'receptionist');
-                    });
-                })
-                ->where(function ($q) use ($user, $ids) {
-                    $q->where('created_by_user_id', $user->id)
-                      ->orWhereHas('locations', function ($q2) use ($ids) {
-                          $q2->whereIn('locations.id', $ids ?: [-1]);
-                      });
-                });
+        if (! $user->hasPermission('users.view')) {
+            return $query->whereRaw('1 = 0');
         }
 
-        // Receptionists cannot access users
-        return $query->whereRaw('1 = 0');
+        // Scope to accessible locations
+        $ids = $user->accessibleLocationIds() ?? [];
+        
+        return $query
+            ->where(function ($q) use ($ids) {
+                $q->whereHas('locations', function ($q2) use ($ids) {
+                    $q2->whereIn('locations.id', $ids ?: [-1]);
+                })
+                ->orWhereIn('assigned_location_id', $ids ?: [-1]);
+            })
+            // Hide Super Admins from non-super admins
+            ->whereDoesntHave('roles', function ($q) {
+                $q->where('slug', 'superadmin');
+            })
+            ->whereDoesntHave('roleRelation', function ($q) {
+                $q->where('slug', 'superadmin');
+            });
     }
 
     public static function form(Schema $schema): Schema
