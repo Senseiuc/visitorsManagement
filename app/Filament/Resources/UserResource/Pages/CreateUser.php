@@ -285,6 +285,11 @@ class CreateUser extends CreateRecord
                 continue;
             }
 
+            // Sync locations (many-to-many relationship)
+            if ($assignedLocationId) {
+                $user->locations()->sync([$assignedLocationId]);
+            }
+
             if ($roleId) {
                 $user->roles()->syncWithoutDetaching([$roleId]);
                 $user->forceFill(['role_id' => $roleId])->save();
