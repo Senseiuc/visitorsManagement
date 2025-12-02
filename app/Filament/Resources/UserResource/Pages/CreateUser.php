@@ -127,7 +127,7 @@ class CreateUser extends CreateRecord
 
                     [$summary, $failures] = $this->processCsvImport($fullPath, $user);
 
-                    $message = "Created: {$summary['created']}, Updated: {$summary['updated']}, Failed: {$summary['failed']}";
+                    $message = "Created: {$summary['created']}, Failed: {$summary['failed']} (duplicates/errors)";
                     $note = Notification::make()->title('Import finished')->body($message)->success();
 
                     if ($summary['failed'] > 0) {
@@ -169,6 +169,20 @@ class CreateUser extends CreateRecord
         $rowIndex = 0;
         while (($row = fgetcsv($handle)) !== false) {
             $rowIndex++;
+            
+            // Convert encoding to UTF-8 if needed
+            $row = array_map(function ($value) {
+                if ($value === null || $value === '') {
+                    return $value;
+                }
+                // Detect encoding and convert to UTF-8
+                $encoding = mb_detect_encoding($value, ['UTF-8', 'Windows-1252', 'ISO-8859-1', 'ASCII'], true);
+                if ($encoding && $encoding !== 'UTF-8') {
+                    return mb_convert_encoding($value, 'UTF-8', $encoding);
+                }
+                return $value;
+            }, $row);
+            
             if ($rowIndex === 1) {
                 $headers = array_map(fn ($h) => Str::of($h)->lower()->trim()->toString(), $row);
                 continue;
@@ -227,34 +241,53 @@ class CreateUser extends CreateRecord
                 $assignedLocationId = $actor->assigned_location_id ?: null;
             }
 
+            // Check for duplicate staff_id if provided
+            if ($staffId !== '') {
+                $existingStaffId = User::query()
+                    ->where('staff_id', $staffId)
+                    ->where('email', '!=', $email)
+                    ->exists();
+                if ($existingStaffId) {
+                    $errors[] = 'staff_id already exists for another user: ' . $staffId;
+                }
+            }
+
+            // Check for duplicate email
+            $existingEmail = User::query()->where('email', $email)->exists();
+            if ($existingEmail) {
+                $errors[] = 'email already exists: ' . $email;
+            }
+
             if (! empty($errors)) {
                 $failed++;
                 $failures[] = array_merge($data, [ 'error' => implode('; ', $errors) ]);
                 continue;
             }
 
-            $user = User::query()->where('email', $email)->first();
-            $isNew = false;
-            if (! $user) {
-                $user = new User();
-                $user->email = $email;
-                $user->password = bcrypt(Str::random(12));
-                $isNew = true;
-            }
-
+            // Create new user
+            $user = new User();
+            $user->email = $email;
+            $user->password = bcrypt(Str::random(12));
             $user->name = $name;
             if ($staffId !== '') { $user->staff_id = $staffId; }
             if ($intercom !== '') { $user->intercom = $intercom; }
             if ($gsm !== '') { $user->phone_number = $gsm; }
             if ($assignedLocationId) { $user->assigned_location_id = $assignedLocationId; }
-            $user->save();
+            
+            try {
+                $user->save();
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                $failed++;
+                $failures[] = array_merge($data, [ 'error' => 'Database constraint violation: ' . $e->getMessage() ]);
+                continue;
+            }
 
             if ($roleId) {
                 $user->roles()->syncWithoutDetaching([$roleId]);
                 $user->forceFill(['role_id' => $roleId])->save();
             }
 
-            if ($isNew) { $created++; } else { $updated++; }
+            $created++;
         }
 
         fclose($handle);
