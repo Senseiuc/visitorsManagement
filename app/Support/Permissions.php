@@ -16,10 +16,12 @@ class Permissions
             'locations' => 'Locations',
             'floors' => 'Floors',
             'departments' => 'Departments',
-            'users' => 'Users',
+            'users' => 'Users/Staff',
             'visitors' => 'Visitors',
             'visits' => 'Visits',
             'blacklist' => 'Blacklist',
+            'roles' => 'Roles',
+            'reasons' => 'Reasons for Visit',
         ];
 
         $perms = [];
