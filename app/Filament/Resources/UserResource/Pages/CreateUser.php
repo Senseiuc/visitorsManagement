@@ -104,7 +104,7 @@ class CreateUser extends CreateRecord
                         ->directory('imports')
                         ->disk('local')
                         ->required()
-                        ->helperText('Headers required: staff name, staff id (optional), dept, floor, intercom, gsm, email address, role' . ($user->isSuperAdmin() ? ', location' : '') . '. Use CSV for best compatibility.'),
+                        ->helperText('Headers required: staff name, staff id (optional), dept, floor, intercom, gsm, email address, role' . ($user->isSuperAdmin() ? ', location (name or UUID)' : '') . '. Use CSV for best compatibility.'),
                 ])
                 ->action(function (array $data) use ($user) {
                     $path = $data['import_file'] ?? null;
@@ -127,7 +127,7 @@ class CreateUser extends CreateRecord
 
                     [$summary, $failures] = $this->processCsvImport($fullPath, $user);
 
-                    $message = "Created: {$summary['created']}, Failed: {$summary['failed']} (duplicates/errors)";
+                    $message = "Created: {$summary['created']}, Updated: {$summary['updated']}, Failed: {$summary['failed']}";
                     $note = Notification::make()->title('Import finished')->body($message)->success();
 
                     if ($summary['failed'] > 0) {
@@ -228,8 +228,10 @@ class CreateUser extends CreateRecord
             // Resolve location if needed
             $assignedLocationId = null;
             if ($locationName !== '') {
+                // Try to match by UUID first, then by name
                 $loc = Location::query()
-                    ->whereRaw('LOWER(name) = ?', [strtolower($locationName)])
+                    ->where('uuid', $locationName)
+                    ->orWhereRaw('LOWER(name) = ?', [strtolower($locationName)])
                     ->first();
                 if ($loc) {
                     $assignedLocationId = $loc->id;
@@ -241,7 +243,7 @@ class CreateUser extends CreateRecord
                 $assignedLocationId = $actor->assigned_location_id ?: null;
             }
 
-            // Check for duplicate staff_id if provided
+            // Check for duplicate staff_id (only if it would conflict with a different user)
             if ($staffId !== '') {
                 $existingStaffId = User::query()
                     ->where('staff_id', $staffId)
@@ -252,22 +254,23 @@ class CreateUser extends CreateRecord
                 }
             }
 
-            // Check for duplicate email
-            $existingEmail = User::query()->where('email', $email)->exists();
-            if ($existingEmail) {
-                $errors[] = 'email already exists: ' . $email;
-            }
-
             if (! empty($errors)) {
                 $failed++;
                 $failures[] = array_merge($data, [ 'error' => implode('; ', $errors) ]);
                 continue;
             }
 
-            // Create new user
-            $user = new User();
-            $user->email = $email;
-            $user->password = bcrypt(Str::random(12));
+            // Find existing user by email or create new
+            $user = User::query()->where('email', $email)->first();
+            $isNew = false;
+            if (! $user) {
+                $user = new User();
+                $user->email = $email;
+                $user->password = bcrypt(Str::random(12));
+                $isNew = true;
+            }
+
+            // Update user fields
             $user->name = $name;
             if ($staffId !== '') { $user->staff_id = $staffId; }
             if ($intercom !== '') { $user->intercom = $intercom; }
@@ -287,7 +290,7 @@ class CreateUser extends CreateRecord
                 $user->forceFill(['role_id' => $roleId])->save();
             }
 
-            $created++;
+            if ($isNew) { $created++; } else { $updated++; }
         }
 
         fclose($handle);
