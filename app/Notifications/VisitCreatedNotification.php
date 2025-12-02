@@ -31,10 +31,11 @@ class VisitCreatedNotification extends Notification implements ShouldQueue
     {
         $channels = ['mail'];
 
+        // SMS notifications disabled for now
         // Only send SMS if user has a phone number
-        if (!empty($notifiable->phone_number)) {
-            $channels[] = TermiiSmsChannel::class;
-        }
+        // if (!empty($notifiable->phone_number)) {
+        //     $channels[] = TermiiSmsChannel::class;
+        // }
 
         return $channels;
     }

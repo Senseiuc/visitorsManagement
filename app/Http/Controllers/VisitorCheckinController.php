@@ -6,10 +6,12 @@ use App\Models\ReasonForVisit;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\Visitor;
+use App\Services\CheckinService;
 use Cloudinary\Exception\ConfigurationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Log;
 use Throwable;
@@ -182,7 +184,7 @@ class VisitorCheckinController extends Controller
 
         $data = $request->validate($rules);
 
-        $checkinService = new \App\Services\CheckinService();
+        $checkinService = new CheckinService();
 
         if ($mode === 'existing') {
             $visitor = Visitor::findOrFail((int) $data['visitor_id']);
@@ -193,7 +195,7 @@ class VisitorCheckinController extends Controller
         // Validate no duplicate check-in
         try {
             $checkinService->validateDuplicateCheckin($visitor, $locationId);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         }
 
@@ -201,7 +203,7 @@ class VisitorCheckinController extends Controller
         $staffId = $data['staff_visited_id'] ? (int) $data['staff_visited_id'] : null;
         try {
             $checkinService->validateStaffLocation($staffId, $locationId);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         }
 
