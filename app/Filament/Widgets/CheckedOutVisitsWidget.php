@@ -28,7 +28,7 @@ class CheckedOutVisitsWidget extends BaseWidget
             ->columns([
                 Tables\Columns\TextColumn::make('visitor.full_name')
                     ->label('Visitor')
-                    ->searchable()
+                    ->searchable(['first_name', 'last_name'])
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('staff.name')

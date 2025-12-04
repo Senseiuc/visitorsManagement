@@ -21,6 +21,8 @@ Route::get('/visitor/staff-lookup', [VisitorCheckinController::class, 'lookupSta
     ->name('visitor.staff-lookup')
     ->middleware('throttle:60,1'); // 60 requests per minute
 
+Route::get('/captcha/image', [\App\Http\Controllers\CaptchaController::class, 'generate'])->name('captcha.image');
+
 // Securely serve local storage files limited to the 'imports' directory
 Route::get('/files/local', function (Request $request) {
     if (! auth()->check()) {

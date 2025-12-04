@@ -37,7 +37,8 @@ class RecentVisitorsWidget extends BaseWidget
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->label('Name')
-                    ->searchable(),
+                    ->searchable(['first_name', 'last_name'])
+                    ->sortable(['first_name', 'last_name']),
 
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')

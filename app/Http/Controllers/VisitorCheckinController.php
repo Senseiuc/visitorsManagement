@@ -61,6 +61,11 @@ class VisitorCheckinController extends Controller
         $data = $request->validate([
             'email' => ['nullable', 'email'],
             'mobile' => ['nullable', 'string', 'max:50'],
+            'captcha' => ['required', function ($attribute, $value, $fail) {
+                if (strtoupper($value) !== session('captcha_code')) {
+                    $fail('Invalid captcha code.');
+                }
+            }],
         ]);
 
         if (blank($data['email'] ?? null) && blank($data['mobile'] ?? null)) {
@@ -181,6 +186,13 @@ class VisitorCheckinController extends Controller
                 'image' => ['nullable', 'image', 'max:5120'], // 5MB
             ]);
         }
+
+        // Add captcha validation
+        $rules['captcha'] = ['required', function ($attribute, $value, $fail) {
+            if (strtoupper($value) !== session('captcha_code')) {
+                $fail('Invalid captcha code.');
+            }
+        }];
 
         $data = $request->validate($rules);
 

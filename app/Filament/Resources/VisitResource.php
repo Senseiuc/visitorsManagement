@@ -166,7 +166,9 @@ class VisitResource extends Resource
                 }
             })
             ->columns([
-                Tables\Columns\TextColumn::make('visitor.full_name')->label('Visitor')->searchable(),
+                Tables\Columns\TextColumn::make('visitor.full_name')
+                    ->label('Visitor')
+                    ->searchable(['first_name', 'last_name']),
                 // Staff column - read-only, editable via approval modal
                 Tables\Columns\TextColumn::make('staff.name')
                     ->label('Staff')

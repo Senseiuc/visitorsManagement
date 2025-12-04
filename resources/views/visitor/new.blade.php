@@ -180,6 +180,18 @@
                     @endforeach
                 </select>
             </div>
+
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700">Security Check</label>
+                <div class="flex gap-3 mt-1">
+                    <div class="bg-gray-100 rounded-lg p-2 flex items-center justify-center border border-gray-200">
+                        <img src="{{ route('captcha.image') }}" alt="Captcha" class="h-10 rounded cursor-pointer" onclick="this.src='{{ route('captcha.image') }}?'+Math.random()" title="Click to refresh">
+                    </div>
+                    <input name="captcha" type="text" required
+                           class="block w-full rounded-lg border-gray-300 purple-ring"
+                           placeholder="Enter code" />
+                </div>
+            </div>
         </div>
 
         <!-- NAVIGATION BUTTONS -->

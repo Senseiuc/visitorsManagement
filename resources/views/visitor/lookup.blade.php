@@ -76,6 +76,19 @@
                    placeholder="0801 234 5678" />
         </div>
 
+        <!-- Captcha -->
+        <div>
+            <label for="captcha" class="block text-sm font-medium text-gray-800">Security Check</label>
+            <div class="flex gap-3 mt-1">
+                <div class="bg-gray-100 rounded-lg p-2 flex items-center justify-center border border-gray-200">
+                    <img src="{{ route('captcha.image') }}" alt="Captcha" class="h-10 rounded cursor-pointer" onclick="this.src='{{ route('captcha.image') }}?'+Math.random()" title="Click to refresh">
+                </div>
+                <input id="captcha" name="captcha" type="text" required
+                       class="block w-full rounded-lg border-gray-300" style="--tw-ring-color: #642d86;" onfocus="this.style.borderColor='#642d86'" onblur="this.style.borderColor=''"
+                       placeholder="Enter code" />
+            </div>
+        </div>
+
         <!-- Submit -->
         <div class="pt-2">
             <button type="submit"

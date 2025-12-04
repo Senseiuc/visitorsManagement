@@ -35,7 +35,7 @@ class VisitsAwaitingApprovalWidget extends BaseWidget
             ->columns([
                 Tables\Columns\TextColumn::make('visitor.full_name')
                     ->label('Visitor')
-                    ->searchable()
+                    ->searchable(['first_name', 'last_name'])
                     ->description(fn (Visit $record) => $record->visitor->is_blacklisted 
                         ? '⚠️ BLACKLISTED: ' . ($record->visitor->reasons_for_blacklisting ?: 'No reason provided')
                         : null

@@ -29,7 +29,9 @@ class NotCheckedOutWidget extends BaseWidget
         return $table
             ->query($this->getTableQuery())
             ->columns([
-                Tables\Columns\TextColumn::make('visitor.full_name')->label('Visitor')->searchable(),
+                Tables\Columns\TextColumn::make('visitor.full_name')
+                    ->label('Visitor')
+                    ->searchable(['first_name', 'last_name']),
                 Tables\Columns\TextColumn::make('staff.name')
                     ->label('Staff')
                     ->formatStateUsing(fn ($state) => $state ?: '—')
