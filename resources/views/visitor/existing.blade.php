@@ -117,15 +117,25 @@
         </div>
 
         <!-- Captcha -->
-        <div>
+        <div x-data="{ 
+            question: 'Loading...', 
+            init() { this.refresh(); },
+            async refresh() {
+                this.question = '...';
+                const res = await fetch('{{ route('captcha.image') }}');
+                const data = await res.json();
+                this.question = data.question;
+            }
+        }">
             <label for="captcha" class="block text-sm font-medium text-gray-700">Security Check</label>
             <div class="flex gap-3 mt-1">
-                <div class="bg-gray-100 rounded-lg p-2 flex items-center justify-center border border-gray-200">
-                    <img src="{{ route('captcha.image') }}" alt="Captcha" class="h-10 rounded cursor-pointer" onclick="this.src='{{ route('captcha.image') }}?'+Math.random()" title="Click to refresh">
+                <div class="bg-gray-100 rounded-lg px-4 py-2 flex items-center justify-center border border-gray-200 min-w-[100px] cursor-pointer" 
+                     @click="refresh" title="Click to refresh">
+                    <span x-text="question" class="font-bold text-gray-700 tracking-wider"></span>
                 </div>
-                <input id="captcha" name="captcha" type="text" required
+                <input id="captcha" name="captcha" type="number" required
                        class="block w-full rounded-lg border-gray-300 transition" style="--tw-ring-color: #642d86;" onfocus="this.style.borderColor='#642d86'" onblur="this.style.borderColor=''"
-                       placeholder="Enter code" />
+                       placeholder="Answer" />
             </div>
         </div>
 
